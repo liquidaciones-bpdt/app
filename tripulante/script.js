@@ -224,7 +224,7 @@ function renderDashboard() {
 }
 
 function renderDocuments(docs) {
-  const container = document.getElementById('docs-container');
+  const container = document.getElementById('dash-document-list');
   if (!container) return;
 
   if (docs.length === 0) {

@@ -95,7 +95,7 @@ function switchView(viewName) {
  */
 function setIsLoading(loading) {
   currentState.isLoading = loading;
-  const overlay = document.getElementById('loading-overlay');
+  const overlay = document.getElementById('global-loader');
   if (overlay) {
     overlay.style.display = loading ? 'flex' : 'none';
   }
@@ -128,7 +128,7 @@ async function handleLogin() {
 }
 
 async function handleCheckDni() {
-  const dni = document.getElementById('reg-dni-input').value.trim();
+  const dni = document.getElementById('check-dni-input').value.trim();
   if (dni.length < 8) {
     alert("El DNI debe tener al menos 8 dígitos.");
     return;

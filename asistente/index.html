@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPdT — Asistente de Transporte</title>
+      <meta name="htbpdt-app" content="asistente">
+  <meta name="htbpdt-api-base" content="">
+  <meta name="htbpdt-storage-key" content="htbpdt_asistente_session">
+  <title>BPdT — Asistente de Transporte</title>
     <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -155,29 +158,29 @@
             </div>
 
             <nav class="flex-1 space-y-2">
-                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-white bg-[#E20613] shadow-xl shadow-red-200">
+                <button data-action="switch-tab" data-target="dashboard" id="nav-dashboard" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-white bg-[#E20613] shadow-xl shadow-red-200">
                     <i data-lucide="layout-dashboard" size="20"></i>
                     Dashboard
                 </button>
-                <button onclick="switchTab('fleet')" id="nav-fleet" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
+                <button data-action="switch-tab" data-target="fleet" id="nav-fleet" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
                     <i data-lucide="truck" size="20"></i>
                     Unidades
                 </button>
-                <button onclick="switchTab('crew')" id="nav-crew" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
+                <button data-action="switch-tab" data-target="crew" id="nav-crew" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
                     <i data-lucide="users" size="20"></i>
                     Tripulación
                 </button>
-                <button onclick="switchTab('docs')" id="nav-docs" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
+                <button data-action="switch-tab" data-target="docs" id="nav-docs" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
                     <i data-lucide="file-text" size="20"></i>
                     Documentos
                 </button>
-                <button onclick="switchTab('company')" id="nav-company" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
+                <button data-action="switch-tab" data-target="company" id="nav-company" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
                     <i data-lucide="building-2" size="20"></i>
                     Empresa
                 </button>
             </nav>
 
-            <button onclick="logout()" class="mt-auto w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-red-50 hover:text-[#E20613] transition-all text-sm">
+            <button id="logout-btn" data-action="logout" class="mt-auto w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-red-50 hover:text-[#E20613] transition-all text-sm">
                 <i data-lucide="log-out" size="20"></i>
                 Cerrar Sesión
             </button>
@@ -196,14 +199,14 @@
                     <div class="flex items-center gap-4">
                         <div class="text-right">
                             <p class="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Empresa</p>
-                            <p id="user-empresa" class="font-black text-slate-900 mt-1">MUNDO LOGÍSTICO S.A.C.</p>
+                            <p id="user-empresa" data-bind="session.company.razon_social" class="font-black text-slate-900 mt-1">MUNDO LOGÍSTICO S.A.C.</p>
                         </div>
                         <div id="user-avatar" class="w-14 h-14 bg-gradient-to-br from-[#E20613] to-[#B90510] rounded-full border-4 border-white shadow-lg flex items-center justify-center font-black text-white text-xl">
                             ML
                         </div>
                     </div>
                     <!-- REFRESH BUTTON -->
-                    <button id="refresh-btn" onclick="refreshData()" class="w-12 h-12 bg-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-[#E20613] hover:border-red-100 hover:shadow-xl hover:shadow-red-50 transition-all group scale-100 active:scale-95" title="Sincronizar Datos">
+                    <button id="refresh-btn" data-action="refresh-data" class="w-12 h-12 bg-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-[#E20613] hover:border-red-100 hover:shadow-xl hover:shadow-red-50 transition-all group scale-100 active:scale-95" title="Sincronizar Datos">
                         <i id="refresh-icon" data-lucide="refresh-cw" size="20"></i>
                     </button>
                 </div>
@@ -220,7 +223,7 @@
                         <h4 class="text-xl font-black text-red-900 tracking-tight">Acción requerida</h4>
                         <p id="expired-text" class="text-red-700 font-medium"></p>
                     </div>
-                    <button onclick="switchTab('docs')" class="btn-primary py-3 px-6 shadow-sm">Revisar Ahora</button>
+                    <button data-action="switch-tab" data-target="docs" class="btn-primary py-3 px-6 shadow-sm">Revisar Ahora</button>
                 </div>
 
                 <!-- Stats Grid -->
@@ -288,10 +291,10 @@
             <!-- SECTION: DOCS -->
             <div id="view-docs" class="view-section space-y-8">
                 <div class="flex gap-3 mb-8" id="docs-filters">
-                    <button onclick="filterDocs('all')" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white shadow-xl">Todos</button>
-                    <button onclick="filterDocs('unidad')" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-slate-500 border border-slate-100">Unidades</button>
-                    <button onclick="filterDocs('tripulacion')" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-slate-500 border border-slate-100">Tripulación</button>
-                    <button onclick="filterDocs('empresa')" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-slate-500 border border-slate-100">Empresa</button>
+                    <button data-action="filter-docs" data-filter="all" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white shadow-xl">Todos</button>
+                    <button data-action="filter-docs" data-filter="unidad" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-slate-500 border border-slate-100">Unidades</button>
+                    <button data-action="filter-docs" data-filter="tripulacion" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-slate-500 border border-slate-100">Tripulación</button>
+                    <button data-action="filter-docs" data-filter="empresa" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-slate-500 border border-slate-100">Empresa</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="docs-grid"></div>
             </div>
@@ -305,15 +308,15 @@
                             <div class="grid grid-cols-2 gap-8">
                                 <div class="space-y-1">
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Razón Social</p>
-                                    <p class="font-black text-slate-700">MUNDO LOGÍSTICO S.A.C.</p>
+                                    <p id="company-razon-social" data-bind="company.razon_social" class="font-black text-slate-700">MUNDO LOGÍSTICO S.A.C.</p>
                                 </div>
                                 <div class="space-y-1">
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">RUC</p>
-                                    <p class="font-black text-slate-700">20601234567</p>
+                                    <p id="company-ruc" data-bind="company.ruc" class="font-black text-slate-700">20601234567</p>
                                 </div>
                                 <div class="space-y-1">
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dirección</p>
-                                    <p class="font-medium text-slate-600">Av. Industrial 450, Lima - Perú</p>
+                                    <p id="company-direccion" data-bind="company.direccion" class="font-medium text-slate-600">Av. Industrial 450, Lima - Perú</p>
                                 </div>
                             </div>
                         </div>
@@ -322,7 +325,7 @@
                              <div class="space-y-4">
                                 <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
                                     <span class="font-bold text-slate-600">Certificación BPDT</span>
-                                    <span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black">VALIDADO HASTA 2027</span>
+                                    <span id="company-admin-status" data-bind="company.estado_admin_label" class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black">VALIDADO HASTA 2027</span>
                                 </div>
                              </div>
                         </div>
@@ -341,14 +344,15 @@
     <!-- MODAL: UNIT FORM (REGISTER/EDIT) -->
     <div id="unit-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
         <div class="w-full max-w-2xl bg-white rounded-[40px] shadow-2xl p-10 relative overflow-hidden">
-            <button onclick="closeUnitModal()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900"><i data-lucide="x" size="24"></i></button>
+            <button data-action="close-unit-modal" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900"><i data-lucide="x" size="24"></i></button>
             <div class="space-y-8">
                 <div>
                     <h3 id="unit-modal-title" class="text-2xl font-black text-slate-900 tracking-tight italic">Registrar Unidad</h3>
                     <p class="text-slate-500 font-medium mt-1">Completa las especificaciones técnicas de la unidad.</p>
                 </div>
-                <form id="unit-form" onsubmit="handleUnitSubmit(event)" class="grid grid-cols-2 gap-6">
+                <form id="unit-form" data-action="unit-submit" class="grid grid-cols-2 gap-6">
                     <input type="hidden" id="unit-form-mode" value="create">
+                    <input type="hidden" id="unit-form-empresa-ruc" data-field="empresa_ruc" value="">
                     <div class="space-y-2">
                         <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Placa</label>
                         <input type="text" id="form-unit-id" placeholder="ABC-123" class="input-brand" required>
@@ -391,7 +395,7 @@
                         </select>
                     </div>
                     <div class="col-span-2 flex gap-4 pt-4">
-                        <button type="button" onclick="closeUnitModal()" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">Cancelar</button>
+                        <button type="button" data-action="close-unit-modal" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">Cancelar</button>
                         <button type="submit" class="flex-[2] btn-primary">Guardar Cambios</button>
                     </div>
                 </form>
@@ -402,7 +406,7 @@
     <!-- MODAL: UNIT DETAILS (DOCUMENTS) -->
     <div id="details-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
         <div class="w-full max-w-3xl bg-white rounded-[40px] shadow-2xl p-10 relative max-h-[90vh] flex flex-col">
-            <button onclick="closeDetailsModal()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900 z-10"><i data-lucide="x" size="24"></i></button>
+            <button data-action="close-details-modal" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900 z-10"><i data-lucide="x" size="24"></i></button>
             <div class="space-y-2 mb-8 pr-12">
                 <h3 id="details-modal-title" class="text-2xl font-black text-slate-900 tracking-tight italic">Documentación de Unidad</h3>
                 <p id="details-modal-subtitle" class="text-slate-500 font-medium"></p>
@@ -411,7 +415,7 @@
                 <!-- Docs will be injected here -->
             </div>
             <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
-                <button onclick="handleMenuAction('report')" class="btn-primary py-3 px-8 flex items-center justify-center gap-2">
+                <button data-action="menu-action" data-menu-action="report" class="btn-primary py-3 px-8 flex items-center justify-center gap-2">
                     <i data-lucide="download-cloud" size="18"></i> Descargar Reporte Completo
                 </button>
             </div>
@@ -420,13 +424,13 @@
 
     <!-- CONTEXTUAL DROPDOWN MENU -->
     <div id="global-dropdown" class="dropdown-menu">
-        <button onclick="handleMenuAction('details')" class="dropdown-item">
+        <button data-action="menu-action" data-menu-action="details" class="dropdown-item">
             <i data-lucide="eye" size="16"></i> Ver Detalles
         </button>
-        <button onclick="handleMenuAction('edit')" class="dropdown-item">
+        <button data-action="menu-action" data-menu-action="edit" class="dropdown-item">
             <i data-lucide="edit-3" size="16"></i> Actualizar
         </button>
-        <button onclick="handleMenuAction('report')" class="dropdown-item">
+        <button data-action="menu-action" data-menu-action="report" class="dropdown-item">
             <i data-lucide="download" size="16"></i> Descargar Reporte
         </button>
     </div>
@@ -455,7 +459,7 @@
                          <input id="login-pass" type="password" placeholder="••••••••" class="input-brand">
                     </div>
                 </div>
-                <button onclick="handleLogin()" class="w-full btn-primary py-5 text-lg">ACCEDER AL SISTEMA</button>
+                <button id="login-submit" data-action="login" class="w-full btn-primary py-5 text-lg">ACCEDER AL SISTEMA</button>
             </div>
             
             <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em]">
@@ -467,7 +471,7 @@
     <!-- MODAL: UPLOAD DOC -->
 <div id="upload-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
     <div class="w-full max-w-xl bg-white rounded-[40px] shadow-2xl p-10 relative">
-        <button onclick="closeUpload()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900">
+        <button data-action="close-upload-modal" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900">
             <i data-lucide="x" size="24"></i>
         </button>
 
@@ -490,7 +494,7 @@
                 </div>
 
                 <!-- 🔴 DROPZONE FUNCIONAL -->
-                <div onclick="document.getElementById('upload-file').click()"
+                <div id="upload-dropzone" data-action="open-file-picker" data-target-input="upload-file"
                      class="p-10 border-2 border-dashed border-slate-100 rounded-[32px] bg-[#F8FAFC] flex flex-col items-center justify-center text-center cursor-pointer group hover:bg-red-50 hover:border-red-100 transition-all">
 
                     <div class="p-5 bg-white rounded-3xl text-slate-300 group-hover:text-[#E20613] shadow-sm mb-4">
@@ -509,11 +513,11 @@
             </div>
 
             <div class="flex gap-4">
-                <button onclick="closeUpload()" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50">
+                <button data-action="close-upload-modal" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50">
                     Cancelar
                 </button>
 
-                <button id="btn-sync-doc" onclick="uploadDocument()" class="flex-[2] btn-primary">
+                <button id="btn-sync-doc" data-action="upload-document" class="flex-[2] btn-primary">
                     Sincronizar Datos
                 </button>
             </div>
@@ -522,6 +526,11 @@
 </div>
 
     <!-- Load Local Script -->
+    <script id="app-config" type="application/json">{
+      "app":"asistente",
+      "sessionStorageKey":"htbpdt_asistente_session",
+      "displayEmpresaField":"razon_social"
+    }</script>
     <script src="script.js"></script>
     <script>
         // Init icons

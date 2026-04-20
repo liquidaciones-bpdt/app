@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validador HT-BPDT</title>
+  
+  <!-- FONTS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+  
+  <!-- LIBRARIES -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    :root {
+      --primary-red: #E30613;
+      --primary-amber: #FFB300;
+      --primary-green: #00B074;
+      --bg-slate: #F8FAFC;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-slate);
+      color: #1E293B;
+      margin: 0;
+      overflow-x: hidden;
+    }
+
+    /* CUSTOM SQUIRCLE UTILITIES */
+    .card-brand {
+      background-color: white;
+      border-radius: 2.5rem; /* 40px */
+      border: 1px solid #f1f5f9;
+      box-shadow: 0 25px 50px -12px rgba(241, 245, 249, 0.6);
+      transition: all 0.3s ease;
+    }
+
+    .card-brand:hover {
+      box-shadow: 0 35px 60px -15px rgba(226, 232, 240, 0.8);
+      transform: translateY(-4px);
+    }
+
+    .input-brand {
+      width: 100%;
+      padding: 1.25rem 1.5rem;
+      background-color: #F8FAFC;
+      border: none;
+      border-radius: 2rem;
+      outline: none;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .input-brand:focus {
+      background-color: white;
+      box-shadow: 0 0 0 4px rgba(227, 6, 19, 0.05);
+    }
+
+    .btn-primary {
+      background-color: var(--primary-red);
+      color: white;
+      border-radius: 1.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      transition: all 0.3s ease;
+      box-shadow: 0 20px 40px -10px rgba(227, 6, 19, 0.2);
+    }
+
+    .btn-primary:hover {
+      background-color: #C10510;
+      transform: translateY(-2px);
+      box-shadow: 0 25px 50px -12px rgba(227, 6, 19, 0.3);
+    }
+
+    .spinning {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+    /* LAYOUT UTILS */
+    .view-content { display: none; }
+    .view-content.active { display: block; }
+    #app-container { display: none; }
+    #login-container { display: flex; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-container" class="fixed inset-0 z-[100] bg-[#F8FAFC] flex flex-col items-center justify-center p-6 pb-12 transition-opacity duration-400">
+    <div class="w-full max-w-[440px] space-y-12">
+      <div class="text-center space-y-6">
+        <div class="inline-flex items-center justify-center bg-[#E30613] rounded-[48px] shadow-2xl shadow-red-200 text-white" style="width: 94px; height: 97px;">
+          <i data-lucide="shield-check" style="width: 48px; height: 48px; stroke-width: 2.5;"></i>
+        </div>
+        <div>
+          <p class="font-medium text-[#64748b] uppercase tracking-[0.4em] mb-2 text-sm">HT-BPDT</p>
+          <h1 class="font-black text-[#101828] tracking-tighter leading-none uppercase text-3xl">Portal Validador</h1>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-[48px] p-10 shadow-2xl shadow-slate-200 border border-slate-100 space-y-8">
+        <form id="login-form" class="space-y-8">
+          <div class="space-y-6">
+            <div class="space-y-2">
+              <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">DNI del Validador</label>
+              <div class="relative">
+                <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" style="width: 18px; height: 18px;"></i>
+                <input type="text" placeholder="Ingresa tu número" class="input-brand pl-12" required>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contraseña</label>
+              <div class="relative">
+                <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" style="width: 18px; height: 18px;"></i>
+                <input type="password" placeholder="••••••••" class="input-brand pl-12" required>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="w-full btn-primary py-5 text-lg">ACCEDER AL SISTEMA</button>
+        </form>
+      </div>
+      
+      <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em]">
+        SISTEMA DE GESTIÓN © 2026
+      </p>
+    </div>
+  </div>
+
+  <!-- APP CONTAINER -->
+  <div id="app-container" class="flex min-h-screen bg-[#F8FAFC]">
+    
+    <!-- SIDEBAR -->
+    <aside class="fixed left-0 top-0 h-full w-[280px] bg-white border-r border-[#f1f5f9] p-8 flex flex-col z-50">
+      <div class="flex items-center gap-4 mb-12">
+        <div class="p-3 bg-[#E30613] rounded-2xl text-white shadow-lg shadow-red-100">
+          <i data-lucide="shield-check" style="width: 24px; height: 24px; stroke-width: 2.5;"></i>
+        </div>
+        <div>
+          <p class="text-[9px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-0.5">HT-BPDT</p>
+          <h1 class="text-lg font-black text-slate-900 leading-tight uppercase tracking-tight">Portal Validador</h1>
+        </div>
+      </div>
+
+      <nav class="flex-1 space-y-2" id="sidebar-nav">
+        <!-- Render NavItems here in Script.js -->
+      </nav>
+
+      <button id="logout-btn" class="mt-auto w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-red-50 hover:text-[#E30613] transition-all text-sm">
+        <i data-lucide="log-out" style="width: 20px; height: 20px;"></i>
+        Cerrar Sesión
+      </button>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 ml-[280px] p-12 max-w-[1400px]">
+      
+      <!-- HEADER -->
+      <header class="flex justify-between items-center mb-12 bg-white/80 backdrop-blur-md sticky top-0 py-4 -mx-4 px-4 z-40 rounded-[2rem] border border-white/20 shadow-sm">
+        <div>
+          <h2 id="view-title" class="text-3xl font-black tracking-tighter text-slate-900 uppercase">Resumen Central</h2>
+          <p id="view-subtitle" class="text-slate-500 font-medium text-sm">Gestiona la validación y el cumplimiento de la red.</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+          <button id="back-btn" class="hidden flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Volver
+          </button>
+          
+          <button id="refresh-btn" class="w-12 h-12 bg-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-[#E30613] hover:border-red-100 hover:shadow-xl hover:shadow-red-50 transition-all">
+            <i data-lucide="rotate-cw" style="width: 20px; height: 20px;"></i>
+          </button>
+
+          <div class="flex items-center gap-4 pl-4 border-l border-slate-100">
+            <div class="text-right">
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Autoridad</p>
+              <p class="font-black text-slate-900 mt-0.5 uppercase text-sm">Validador BPdT</p>
+            </div>
+            <div class="w-11 h-11 bg-slate-900 rounded-full border-4 border-white shadow-lg flex items-center justify-center font-black text-white text-base">
+              VF
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEW CHANNELS -->
+      <div id="view-dashboard" class="view-content active space-y-10 pb-20"></div>
+      <div id="view-validation" class="view-content space-y-10 pb-20"></div>
+      <div id="view-companies" class="view-content space-y-10 pb-20"></div>
+      <div id="view-company-detail" class="view-content space-y-10 pb-20"></div>
+      <div id="view-reports" class="view-content space-y-10 pb-20"></div>
+
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div id="modal-container" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
+    <!-- Validation Modal Content here -->
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

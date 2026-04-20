@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="htbpdt-app" content="validador">
+  <meta name="htbpdt-api-base" content="">
+  <meta name="htbpdt-storage-key" content="htbpdt_validador_session">
   <title>Validador HT-BPDT</title>
   
   <!-- FONTS -->
@@ -122,14 +125,14 @@
               <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">DNI del Validador</label>
               <div class="relative">
                 <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" style="width: 18px; height: 18px;"></i>
-                <input type="text" placeholder="Ingresa tu número" class="input-brand pl-12" required>
+                <input id="login-dni" name="dni" autocomplete="username" inputmode="numeric" type="text" placeholder="Ingresa tu número" class="input-brand pl-12" required>
               </div>
             </div>
             <div class="space-y-2">
               <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contraseña</label>
               <div class="relative">
                 <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" style="width: 18px; height: 18px;"></i>
-                <input type="password" placeholder="••••••••" class="input-brand pl-12" required>
+                <input id="login-pass" name="password" autocomplete="current-password" type="password" placeholder="••••••••" class="input-brand pl-12" required>
               </div>
             </div>
           </div>
@@ -190,9 +193,9 @@
           <div class="flex items-center gap-4 pl-4 border-l border-slate-100">
             <div class="text-right">
               <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Autoridad</p>
-              <p class="font-black text-slate-900 mt-0.5 uppercase text-sm">Validador BPdT</p>
+              <p id="validator-display-name" data-bind="session.display_name" class="font-black text-slate-900 mt-0.5 uppercase text-sm">Validador BPdT</p>
             </div>
-            <div class="w-11 h-11 bg-slate-900 rounded-full border-4 border-white shadow-lg flex items-center justify-center font-black text-white text-base">
+            <div id="validator-avatar" data-bind="session.display_initials" class="w-11 h-11 bg-slate-900 rounded-full border-4 border-white shadow-lg flex items-center justify-center font-black text-white text-base">
               VF
             </div>
           </div>
@@ -214,6 +217,11 @@
     <!-- Validation Modal Content here -->
   </div>
 
+  <script id="app-config" type="application/json">{
+    "app":"validador",
+    "sessionStorageKey":"htbpdt_validador_session",
+    "displayEmpresaField":"razon_social"
+  }</script>
   <script src="script.js"></script>
 </body>
 </html>

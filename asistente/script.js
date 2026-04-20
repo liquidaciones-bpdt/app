@@ -346,6 +346,30 @@ function renderDocs() {
   });
 }
 
+// Mostrar nombre del archivo seleccionado
+document.getElementById("upload-file").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    document.getElementById("file-name").innerText = file ? file.name : "";
+});
+
+async function uploadDocument() {
+    const file = document.getElementById("upload-file").files[0];
+    const expiry = document.getElementById("upload-expiry").value;
+
+    if (!file) {
+        alert("Selecciona un archivo");
+        return;
+    }
+
+    console.log("Archivo:", file.name);
+    console.log("Vence:", expiry);
+
+    // 🔹 SIMULACIÓN (por ahora)
+    alert("Documento listo para enviar");
+
+    closeUpload();
+}
+
 // ===============================
 // REFRESH
 // ===============================

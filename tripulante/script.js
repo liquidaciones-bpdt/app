@@ -1,4 +1,4 @@
-const API_URL = "URL_DE_TU_WEB_APP_DEPLOYADA"; // CAMBIAR ESTO
+const API_URL = "https://script.google.com/macros/s/AKfycby_0BzHhCBMZmqtfvPNLPHKbUvLfeK2ppDNR_ErIY-3qq48Xu8a_o153bIWQFqMwMeC/exec"; // CAMBIAR ESTO
 
 let state = {
     user: null,

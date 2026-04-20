@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HT-BPDT Crew Portal</title>
+      <meta name="htbpdt-app" content="tripulante">
+  <meta name="htbpdt-api-base" content="">
+  <meta name="htbpdt-storage-key" content="htbpdt_tripulante_session">
+  <title>HT-BPDT Crew Portal</title>
     <!-- Tailwind Play CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -127,7 +130,7 @@
                             <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-red-500 transition-colors">
                                 <i data-lucide="user" size="18"></i>
                             </div>
-                            <input id="login-dni" type="text" placeholder="Ingresa tu número" class="w-full pl-12 pr-4 py-4 bg-white border-slate-200 text-slate-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 border rounded-2xl outline-none transition-all font-medium placeholder:text-slate-400">
+                            <input id="login-dni" name="dni" autocomplete="username" inputmode="numeric" type="text" placeholder="Ingresa tu número" class="w-full pl-12 pr-4 py-4 bg-white border-slate-200 text-slate-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 border rounded-2xl outline-none transition-all font-medium placeholder:text-slate-400">
                         </div>
                     </div>
                     <!-- Custom Input: Pass -->
@@ -137,13 +140,13 @@
                             <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-red-500 transition-colors">
                                 <i data-lucide="lock" size="18"></i>
                             </div>
-                            <input id="login-pass" type="password" placeholder="••••••••" class="w-full pl-12 pr-4 py-4 bg-white border-slate-200 text-slate-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 border rounded-2xl outline-none transition-all font-medium placeholder:text-slate-400">
+                            <input id="login-pass" name="password" autocomplete="current-password" type="password" placeholder="••••••••" class="w-full pl-12 pr-4 py-4 bg-white border-slate-200 text-slate-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 border rounded-2xl outline-none transition-all font-medium placeholder:text-slate-400">
                         </div>
                     </div>
                 </div>
 
                 <div class="space-y-4">
-                    <button onclick="handleLogin()" class="w-full text-lg py-5 bg-red-600 text-white shadow-xl shadow-red-200 hover:bg-red-700 rounded-2xl font-bold transition-all active:scale-[0.98] outline-none">
+                    <button id="login-submit" data-action="login" class="w-full text-lg py-5 bg-red-600 text-white shadow-xl shadow-red-200 hover:bg-red-700 rounded-2xl font-bold transition-all active:scale-[0.98] outline-none">
                         ACCEDER AL SISTEMA
                     </button>
                     <div class="flex items-center gap-4 py-2">
@@ -151,7 +154,7 @@
                         <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">ó</span>
                         <div class="flex-1 h-px bg-slate-100"></div>
                     </div>
-                    <button onclick="switchView('dni-check')" class="w-full py-4 text-sm border-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-2xl font-bold transition-all active:scale-[0.98] outline-none">
+                    <button data-action="switch-view" data-target-view="dni-check" class="w-full py-4 text-sm border-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-2xl font-bold transition-all active:scale-[0.98] outline-none">
                         REGISTRARSE POR PRIMERA VEZ
                     </button>
                 </div>
@@ -169,7 +172,7 @@
         <!-- ========================================== -->
         <div id="view-dni-check" class="view-transition view-hidden p-6 pt-12 space-y-8">
             <div class="flex items-center justify-between px-2">
-                <button onclick="switchView('login')" class="w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-600 hover:bg-slate-50 transition-colors">
+                <button data-action="switch-view" data-target-view="login" class="w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-600 hover:bg-slate-50 transition-colors">
                     <i data-lucide="chevron-left" size="20"></i>
                 </button>
                 <div class="text-right">
@@ -198,10 +201,10 @@
                             <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-red-500 transition-colors">
                                 <i data-lucide="credit-card" size="18"></i>
                             </div>
-                            <input id="check-dni-input" type="text" placeholder="00000000" class="w-full pl-12 pr-4 py-4 bg-white border-slate-200 text-slate-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 border rounded-2xl outline-none transition-all font-medium placeholder:text-slate-400">
+                            <input id="check-dni-input" name="dni-check" inputmode="numeric" type="text" placeholder="00000000" class="w-full pl-12 pr-4 py-4 bg-white border-slate-200 text-slate-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 border rounded-2xl outline-none transition-all font-medium placeholder:text-slate-400">
                         </div>
                     </div>
-                    <button id="btn-check-dni" onclick="handleCheckDni()" class="w-full py-5 bg-red-600 text-white shadow-xl shadow-red-200 hover:bg-red-700 rounded-2xl font-bold transition-all active:scale-[0.98] outline-none flex items-center justify-center gap-2">
+                    <button id="btn-check-dni" data-action="check-dni" class="w-full py-5 bg-red-600 text-white shadow-xl shadow-red-200 hover:bg-red-700 rounded-2xl font-bold transition-all active:scale-[0.98] outline-none flex items-center justify-center gap-2">
                         CONSULTAR DATOS <i data-lucide="chevron-right" size="18"></i>
                     </button>
                 </div>
@@ -219,7 +222,7 @@
                             </p>
                         </div>
                     </div>
-                    <button onclick="switchView('login')" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-bold text-xs shadow-lg shadow-amber-200">
+                    <button data-action="switch-view" data-target-view="login" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-bold text-xs shadow-lg shadow-amber-200">
                         VOLVER AL INICIO DE SESIÓN
                     </button>
                 </div>
@@ -231,7 +234,7 @@
         <!-- ========================================== -->
         <div id="view-register" class="view-transition view-hidden p-6 pt-12 space-y-8">
             <div class="flex items-center justify-between px-2">
-                <button onclick="switchView('dni-check')" class="w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-600 hover:bg-slate-50">
+                <button data-action="switch-view" data-target-view="dni-check" class="w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-600 hover:bg-slate-50">
                     <i data-lucide="chevron-left" size="20"></i>
                 </button>
                 <div class="text-right">
@@ -297,7 +300,8 @@
                                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-red-500 transition-colors">
                                         <i data-lucide="building-2" size="18"></i>
                                     </div>
-                                    <input id="reg-empresa" type="text" class="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 text-slate-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 border rounded-2xl outline-none transition-all font-medium">
+                                    <input id="reg-empresa" data-bind="prefill.empresa.razon_social" type="text" class="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 text-slate-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 border rounded-2xl outline-none transition-all font-medium">
+                                    <input type="hidden" id="reg-empresa-ruc" data-field="empresa_ruc" value="">
                                 </div>
                             </div>
                         </div>
@@ -313,7 +317,7 @@
                         </div>
                     </div>
 
-                    <button onclick="goToRegStep(2)" class="w-full mt-auto py-5 bg-red-600 text-white shadow-xl shadow-red-200 hover:bg-red-700 rounded-2xl font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 outline-none">
+                    <button data-action="go-register-step" data-step="2" class="w-full mt-auto py-5 bg-red-600 text-white shadow-xl shadow-red-200 hover:bg-red-700 rounded-2xl font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 outline-none">
                         SIGUIENTE: DOCUMENTOS <i data-lucide="chevron-right" size="18"></i>
                     </button>
                 </div>
@@ -352,10 +356,10 @@
                     </div>
 
                     <div class="flex flex-col gap-3 mt-auto">
-                        <button onclick="handleFinalRegister()" class="w-full py-5 bg-red-600 text-white shadow-xl shadow-red-200 hover:bg-red-700 rounded-2xl font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 outline-none">
+                        <button data-action="final-register" class="w-full py-5 bg-red-600 text-white shadow-xl shadow-red-200 hover:bg-red-700 rounded-2xl font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 outline-none">
                             FINALIZAR REGISTRO <i data-lucide="check-circle-2" size="18"></i>
                         </button>
-                        <button onclick="goToRegStep(1)" class="text-xs font-bold text-slate-500 hover:bg-slate-100 py-3 rounded-xl transition-all">
+                        <button data-action="go-register-step" data-step="1" class="text-xs font-bold text-slate-500 hover:bg-slate-100 py-3 rounded-xl transition-all">
                             ATRÁS A TUS DATOS
                         </button>
                     </div>
@@ -378,7 +382,7 @@
                         </p>
                     </div>
 
-                    <button onclick="switchView('login')" class="w-full py-5 bg-slate-900 text-white shadow-xl shadow-slate-200 hover:bg-slate-800 rounded-2xl font-bold transition-all active:scale-[0.98] outline-none">
+                    <button data-action="switch-view" data-target-view="login" class="w-full py-5 bg-slate-900 text-white shadow-xl shadow-slate-200 hover:bg-slate-800 rounded-2xl font-bold transition-all active:scale-[0.98] outline-none">
                         VOLVER AL INICIO
                     </button>
                 </div>
@@ -411,16 +415,16 @@
                             </div>
                         </div>
                         <div class="flex flex-col">
-                            <p id="dash-user-empresa-header" class="text-[12px] font-medium text-white/80 uppercase tracking-widest truncate">
+                            <p id="dash-user-empresa-header" data-bind="profile.empresa.razon_social" class="text-[12px] font-medium text-white/80 uppercase tracking-widest truncate">
                                 <!-- INDUAMERICA SERVICIOS -->
                             </p>
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="handleRefresh()" class="w-12 h-12 flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl text-white hover:bg-white/20 transition-all">
+                        <button data-action="refresh-dashboard" class="w-12 h-12 flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl text-white hover:bg-white/20 transition-all">
                             <i data-lucide="rotate-cw" size="20"></i>
                         </button>
-                        <button onclick="handleLogout()" class="w-12 h-12 flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl text-white hover:bg-white/20 transition-all">
+                        <button data-action="logout" class="w-12 h-12 flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl text-white hover:bg-white/20 transition-all">
                             <i data-lucide="log-out" size="20"></i>
                         </button>
                     </div>
@@ -488,6 +492,11 @@
         </div>
 
     </div>
-</body>
+    <script id="app-config" type="application/json">{
+      "app":"tripulante",
+      "sessionStorageKey":"htbpdt_tripulante_session",
+      "displayEmpresaField":"razon_social"
+    }</script>
     <script src="script.js"></script>
+</body>
 </html>

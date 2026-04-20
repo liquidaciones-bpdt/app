@@ -291,6 +291,42 @@ document.addEventListener("click", () => {
   document.getElementById("global-dropdown").style.display = "none";
 });
 
+function openUpload(placa, docName) {
+  currentContext = { placa, docName };
+  document.getElementById("upload-details").innerText = `${placa} - ${docName}`;
+  openModal("upload-modal");
+}
+
+document.getElementById("btn-sync-doc")
+  .addEventListener("click", async () => {
+
+    const file = document.getElementById("upload-file").files[0];
+    const expiry = document.getElementById("upload-expiry").value;
+
+    if (!file) return alert("Selecciona archivo");
+
+    const reader = new FileReader();
+
+    reader.onload = async function () {
+      showLoader("Subiendo documento...");
+
+      const res = await apiCall("uploadDoc", {
+        placa: currentContext.placa,
+        nombre: currentContext.docName,
+        file: reader.result,
+        expiry
+      });
+
+      hideLoader();
+
+      if (!res.ok) return alert("Error subiendo");
+
+      closeModal("upload-modal");
+      await loadAllData();
+    };
+
+    reader.readAsDataURL(file);
+  });
 
 
 // ===============================

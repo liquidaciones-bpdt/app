@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPdT — Asistente de Transporte</title>
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .card-brand {
+            background-color: white;
+            border-radius: 40px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 25px 50px -12px rgba(241, 245, 249, 0.6);
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+        .input-brand {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .input-brand:focus {
+            border-color: #E20613;
+            box-shadow: 0 0 0 4px rgba(226, 6, 19, 0.1);
+        }
+        .btn-primary {
+            background-color: #E20613;
+            color: white;
+            border-radius: 1rem;
+            font-weight: 700;
+            padding: 1rem 1.5rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 20px 25px -5px rgba(226, 6, 19, 0.2);
+        }
+        .btn-primary:hover { background-color: #B90510; }
+        .btn-primary:active { transform: scale(0.98); }
+        
+        /* Dropdown Menu Styles */
+        .dropdown-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #f1f5f9;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 100;
+            min-width: 160px;
+            padding: 0.5rem;
+            display: none;
+            overflow: hidden;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+        }
+        .dropdown-item:hover {
+            background-color: #f8fafc;
+            color: #E20613;
+        }
+        .btn-action-trigger {
+            padding: 0.5rem;
+            color: #cbd5e1;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+        }
+        .btn-action-trigger:hover {
+            background-color: #f1f5f9;
+            color: #64748b;
+        }
+        
+        .view-section {
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .view-section.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+
+        /* Refresh Animation */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spinning svg, .spinning i {
+            animation: spin 0.6s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] text-[#1e293b]">
+
+    <!-- GLOBAL APP LOADER -->
+    <div id="app-loader" class="fixed inset-0 z-[1000] bg-white/80 backdrop-blur-md flex-col items-center justify-center p-6 hidden transition-all duration-300 opacity-0">
+        <div class="text-center space-y-6">
+            <div class="relative flex items-center justify-center">
+                <!-- Circular Loader -->
+                <svg class="animate-spin w-16 h-16 text-[#E20613]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-10" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <div class="absolute text-[#E20613]">
+                    <i data-lucide="shield-check" size="20"></i>
+                </div>
+            </div>
+            <div>
+                <p id="app-loader-message" class="text-xl font-black text-slate-900 tracking-tight italic">Cargando...</p>
+                <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2">HT-BPDT Asistente Digital</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER (POST-LOGIN) -->
+    <div id="app-container" class="flex min-h-screen hidden">
+        
+        <!-- SIDEBAR -->
+        <aside class="fixed left-0 top-0 h-full w-[280px] bg-white border-r border-[#f1f5f9] p-8 flex flex-col z-50">
+            <div class="flex items-center gap-4 mb-12">
+                <div class="p-3 bg-[#E20613] rounded-2xl text-white">
+                    <i data-lucide="truck" size="24" stroke-width="2.5"></i>
+                </div>
+                <div>
+                    <p class="text-[9px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-0.5">HT-BPDT</p>
+                    <h1 class="text-lg font-black text-slate-900 leading-tight uppercase tracking-tight">Portal Asistente</h1>
+                </div>
+            </div>
+
+            <nav class="flex-1 space-y-2">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-white bg-[#E20613] shadow-xl shadow-red-200">
+                    <i data-lucide="layout-dashboard" size="20"></i>
+                    Dashboard
+                </button>
+                <button onclick="switchTab('fleet')" id="nav-fleet" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
+                    <i data-lucide="truck" size="20"></i>
+                    Unidades
+                </button>
+                <button onclick="switchTab('crew')" id="nav-crew" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
+                    <i data-lucide="users" size="20"></i>
+                    Tripulación
+                </button>
+                <button onclick="switchTab('docs')" id="nav-docs" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
+                    <i data-lucide="file-text" size="20"></i>
+                    Documentos
+                </button>
+                <button onclick="switchTab('company')" id="nav-company" class="nav-btn w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all text-sm text-slate-500 hover:bg-slate-50">
+                    <i data-lucide="building-2" size="20"></i>
+                    Empresa
+                </button>
+            </nav>
+
+            <button onclick="logout()" class="mt-auto w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-red-50 hover:text-[#E20613] transition-all text-sm">
+                <i data-lucide="log-out" size="20"></i>
+                Cerrar Sesión
+            </button>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 ml-[280px] p-12 max-w-[1400px]">
+            
+            <!-- TOP HEADER -->
+            <header class="sticky top-0 bg-white/80 backdrop-blur-md z-40 py-8 mb-6 -mx-12 px-12 flex justify-between items-center border-b border-transparent transition-all" id="main-header">
+                <div>
+                    <h2 id="view-title" class="text-3xl font-black tracking-tighter text-slate-900 uppercase">Dashboard</h2>
+                    <p class="text-slate-500 font-medium">Gestiona tu flota y tripulación con precisión.</p>
+                </div>
+                <div class="flex items-center gap-8">
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Empresa</p>
+                            <p id="user-empresa" class="font-black text-slate-900 mt-1">MUNDO LOGÍSTICO S.A.C.</p>
+                        </div>
+                        <div id="user-avatar" class="w-14 h-14 bg-gradient-to-br from-[#E20613] to-[#B90510] rounded-full border-4 border-white shadow-lg flex items-center justify-center font-black text-white text-xl">
+                            ML
+                        </div>
+                    </div>
+                    <!-- REFRESH BUTTON -->
+                    <button id="refresh-btn" onclick="refreshData()" class="w-12 h-12 bg-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-[#E20613] hover:border-red-100 hover:shadow-xl hover:shadow-red-50 transition-all group scale-100 active:scale-95" title="Sincronizar Datos">
+                        <i id="refresh-icon" data-lucide="refresh-cw" size="20"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- SECTION: DASHBOARD -->
+            <div id="view-dashboard" class="view-section active space-y-12">
+                <!-- Alert Banner -->
+                <div id="expired-alert" class="bg-red-50 border border-red-100 p-8 rounded-[40px] items-center gap-6 shadow-xl shadow-red-100/50 hidden">
+                    <div class="w-16 h-16 bg-[#E20613] rounded-3xl flex items-center justify-center text-white shrink-0">
+                        <i data-lucide="alert-circle" size="32"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-xl font-black text-red-900 tracking-tight">Acción requerida</h4>
+                        <p id="expired-text" class="text-red-700 font-medium"></p>
+                    </div>
+                    <button onclick="switchTab('docs')" class="btn-primary py-3 px-6 shadow-sm">Revisar Ahora</button>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div class="card-brand flex flex-col justify-center items-center text-center py-10 border-[#E20613]/10">
+                        <div class="relative w-32 h-32 mb-4">
+                            <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="42" fill="transparent" stroke="#F1F5F9" stroke-width="10"></circle>
+                                <circle id="compliance-ring" cx="50" cy="50" r="42" fill="transparent" stroke="#E20613" stroke-width="10" stroke-dasharray="263.89" stroke-dashoffset="263.89" stroke-linecap="round" class="transition-all duration-1000"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span id="compliance-val" class="text-3xl font-black text-slate-900">0%</span>
+                            </div>
+                        </div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Cumplimiento Global</p>
+                    </div>
+                    <div class="card-brand py-6 flex flex-col justify-between" id="stat-flota"></div>
+                    <div class="card-brand py-6 flex flex-col justify-between" id="stat-trip"></div>
+                    <div class="card-brand py-6 flex flex-col justify-between" id="stat-empresa"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="card-brand">
+                        <h3 class="font-black text-xl tracking-tight uppercase mb-6">Resumen Flota</h3>
+                        <div id="fleet-summary-list" class="space-y-4"></div>
+                    </div>
+                    <div class="card-brand">
+                        <h3 class="font-black text-xl tracking-tight uppercase mb-6">Revisión Tripulantes</h3>
+                        <div id="crew-summary-list" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: FLEET -->
+            <div id="view-fleet" class="view-section space-y-8">
+                <div class="card-brand p-0 overflow-hidden">
+                    <div class="p-8 border-b border-slate-50 flex flex-wrap gap-4 items-center bg-white sticky top-0 z-10">
+                        <div class="relative flex-1 min-w-[300px]">
+                            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size="18"></i>
+                            <input type="text" placeholder="Buscar unidad..." class="w-full pl-12 pr-4 py-3 bg-[#F8FAFC] border-none rounded-2xl outline-none focus:ring-4 focus:ring-red-50 font-medium">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 border-b border-slate-100">
+                                <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                                    <th class="px-8 py-5">Placa</th>
+                                    <th class="px-8 py-5">Sist / Tipo</th>
+                                    <th class="px-8 py-5">Estado</th>
+                                    <th class="px-8 py-5">Cumplimiento</th>
+                                    <th class="px-8 py-5 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fleet-table-body" class="divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: CREW -->
+            <div id="view-crew" class="view-section space-y-8">
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="crew-grid"></div>
+            </div>
+
+            <!-- SECTION: DOCS -->
+            <div id="view-docs" class="view-section space-y-8">
+                <div class="flex gap-3 mb-8" id="docs-filters">
+                    <button onclick="filterDocs('all')" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white shadow-xl">Todos</button>
+                    <button onclick="filterDocs('unidad')" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-slate-500 border border-slate-100">Unidades</button>
+                    <button onclick="filterDocs('tripulacion')" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-slate-500 border border-slate-100">Tripulación</button>
+                    <button onclick="filterDocs('empresa')" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-slate-500 border border-slate-100">Empresa</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="docs-grid"></div>
+            </div>
+
+            <!-- SECTION: COMPANY -->
+            <div id="view-company" class="view-section">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-8">
+                        <div class="card-brand">
+                            <h3 class="font-black text-xl tracking-tight uppercase mb-8">Información Fiscal</h3>
+                            <div class="grid grid-cols-2 gap-8">
+                                <div class="space-y-1">
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Razón Social</p>
+                                    <p class="font-black text-slate-700">MUNDO LOGÍSTICO S.A.C.</p>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">RUC</p>
+                                    <p class="font-black text-slate-700">20601234567</p>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dirección</p>
+                                    <p class="font-medium text-slate-600">Av. Industrial 450, Lima - Perú</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-brand">
+                             <h3 class="font-black text-xl tracking-tight uppercase mb-8">Estado Administrativo</h3>
+                             <div class="space-y-4">
+                                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                                    <span class="font-bold text-slate-600">Certificación BPDT</span>
+                                    <span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black">VALIDADO HASTA 2027</span>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                    <div class="card-brand bg-slate-900 border-none">
+                        <h3 class="font-black text-xl tracking-tight uppercase mb-6 text-[#E20613]">Soporte Técnico</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-10 font-medium">¿Problemas con la validación? Contacta directamente con soporte para resolver bloqueos de flota.</p>
+                        <button class="w-full bg-white text-slate-900 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all">Contactar</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MODAL: UNIT FORM (REGISTER/EDIT) -->
+    <div id="unit-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
+        <div class="w-full max-w-2xl bg-white rounded-[40px] shadow-2xl p-10 relative overflow-hidden">
+            <button onclick="closeUnitModal()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900"><i data-lucide="x" size="24"></i></button>
+            <div class="space-y-8">
+                <div>
+                    <h3 id="unit-modal-title" class="text-2xl font-black text-slate-900 tracking-tight italic">Registrar Unidad</h3>
+                    <p class="text-slate-500 font-medium mt-1">Completa las especificaciones técnicas de la unidad.</p>
+                </div>
+                <form id="unit-form" onsubmit="handleUnitSubmit(event)" class="grid grid-cols-2 gap-6">
+                    <input type="hidden" id="unit-form-mode" value="create">
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Placa</label>
+                        <input type="text" id="form-unit-id" placeholder="ABC-123" class="input-brand" required>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Sistema</label>
+                        <select id="form-unit-sistema" class="input-brand" required>
+                            <option value="ISOTERMICO">ISOTERMICO</option>
+                            <option value="CLIMATIZADA">CLIMATIZADA</option>
+                            <option value="BASICA">BASICA</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tipo de Unidad</label>
+                        <input type="text" id="form-unit-tipo" placeholder="Ej: CAMION" class="input-brand" required>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Marca</label>
+                        <input type="text" id="form-unit-marca" placeholder="Ej: VOLVO" class="input-brand" required>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Modelo</label>
+                        <input type="text" id="form-unit-modelo" placeholder="Ej: FH16" class="input-brand">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Capacidad (Toneladas)</label>
+                        <input type="number" id="form-unit-capacidad" placeholder="Ej: 15" class="input-brand">
+                    </div>
+                    <div class="flex items-center gap-4 py-4">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Exclusiva</label>
+                        <input type="checkbox" id="form-unit-exclusiva" onchange="toggleLineaExclusiva(this.checked)" class="w-6 h-6 accent-[#E20613]">
+                    </div>
+                    <div id="wrapper-linea-exclusiva" class="space-y-2 hidden transition-all duration-300">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Línea Exclusiva</label>
+                        <select id="form-unit-linea" class="input-brand">
+                            <option value="">Seleccionar línea...</option>
+                            <option value="Clinica">Clinica</option>
+                            <option value="Tecno">Tecno</option>
+                            <option value="Biopas">Biopas</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 flex gap-4 pt-4">
+                        <button type="button" onclick="closeUnitModal()" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">Cancelar</button>
+                        <button type="submit" class="flex-[2] btn-primary">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: UNIT DETAILS (DOCUMENTS) -->
+    <div id="details-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
+        <div class="w-full max-w-3xl bg-white rounded-[40px] shadow-2xl p-10 relative max-h-[90vh] flex flex-col">
+            <button onclick="closeDetailsModal()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900 z-10"><i data-lucide="x" size="24"></i></button>
+            <div class="space-y-2 mb-8 pr-12">
+                <h3 id="details-modal-title" class="text-2xl font-black text-slate-900 tracking-tight italic">Documentación de Unidad</h3>
+                <p id="details-modal-subtitle" class="text-slate-500 font-medium"></p>
+            </div>
+            <div class="flex-1 overflow-y-auto pr-2 space-y-4" id="details-docs-list">
+                <!-- Docs will be injected here -->
+            </div>
+            <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                <button onclick="handleMenuAction('report')" class="btn-primary py-3 px-8 flex items-center justify-center gap-2">
+                    <i data-lucide="download-cloud" size="18"></i> Descargar Reporte Completo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTEXTUAL DROPDOWN MENU -->
+    <div id="global-dropdown" class="dropdown-menu">
+        <button onclick="handleMenuAction('details')" class="dropdown-item">
+            <i data-lucide="eye" size="16"></i> Ver Detalles
+        </button>
+        <button onclick="handleMenuAction('edit')" class="dropdown-item">
+            <i data-lucide="edit-3" size="16"></i> Actualizar
+        </button>
+        <button onclick="handleMenuAction('report')" class="dropdown-item">
+            <i data-lucide="download" size="16"></i> Descargar Reporte
+        </button>
+    </div>
+
+    <!-- MODAL: LOGIN -->
+    <div id="login-modal" class="fixed inset-0 z-[100] bg-[#F8FAFC] flex flex-col items-center justify-center p-6 pb-12">
+        <div class="w-full max-w-[440px] space-y-12">
+            <div class="text-center space-y-2">
+                <div class="inline-flex items-center justify-center bg-[#E20613] rounded-[48px] shadow-2xl shadow-red-200 text-white mb-6" style="width: 94px; height: 97px;">
+                    <i data-lucide="truck" size="36" stroke-width="2.5" style="width: 34px; height: 36px;"></i>
+                </div>
+                <div>
+                    <p class="font-medium text-[#64748b] uppercase tracking-[0.4em] mb-2" style="font-size: 18px;">HT-BPDT</p>
+                    <h1 class="font-black text-[#101828] tracking-tighter leading-none uppercase" style="font-size: 33px;">Portal Asistente</h1>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[48px] p-10 shadow-2xl shadow-slate-200 border border-slate-100 space-y-10">
+                <div class="space-y-6">
+                    <div class="space-y-2">
+                         <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">DNI del Administrador</label>
+                         <input id="login-dni" type="text" placeholder="Ingresa tu número" class="input-brand">
+                    </div>
+                    <div class="space-y-2">
+                         <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contraseña</label>
+                         <input id="login-pass" type="password" placeholder="••••••••" class="input-brand">
+                    </div>
+                </div>
+                <button onclick="handleLogin()" class="w-full btn-primary py-5 text-lg">ACCEDER AL SISTEMA</button>
+            </div>
+            
+            <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em]">
+                SISTEMA DE GESTIÓN © 2026
+            </p>
+        </div>
+    </div>
+
+    <!-- MODAL: UPLOAD DOC -->
+    <div id="upload-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
+        <div class="w-full max-w-xl bg-white rounded-[40px] shadow-2xl p-10 relative">
+            <button onclick="closeUpload()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900"><i data-lucide="x" size="24"></i></button>
+            <div class="space-y-8">
+                <div>
+                    <h3 class="text-2xl font-black text-slate-900 tracking-tight italic">Subir Documento</h3>
+                    <p id="upload-details" class="text-slate-500 font-medium mt-1"></p>
+                </div>
+                <div class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha de Vencimiento</label>
+                        <input type="date" id="upload-expiry" class="input-brand">
+                    </div>
+                    <div class="p-10 border-2 border-dashed border-slate-100 rounded-[32px] bg-[#F8FAFC] flex flex-col items-center justify-center text-center cursor-pointer group hover:bg-red-50 hover:border-red-100 transition-all">
+                        <div class="p-5 bg-white rounded-3xl text-slate-300 group-hover:text-[#E20613] shadow-sm mb-4"><i data-lucide="upload" size="32"></i></div>
+                        <p class="font-bold text-slate-600">Seleccionar o Arrastrar Archivo</p>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">PDF, JPG o PNG • MAX 10MB</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="closeUpload()" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50">Cancelar</button>
+                    <button id="btn-sync-doc" class="flex-[2] btn-primary">Sincronizar Datos</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Local Script -->
+    <script src="script.js"></script>
+    <script>
+        // Init icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>

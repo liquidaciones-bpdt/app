@@ -2,172 +2,87 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPdT — Asistente de Transporte</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HT-BPDT Crew Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; }
-        .card-brand {
-            background-color: white;
-            border-radius: 40px;
-            border: 1px solid #f1f5f9;
-            box-shadow: 0 25px 50px -12px rgba(241, 245, 249, 0.6);
-            padding: 2rem;
-            transition: all 0.3s ease;
-        }
-        .input-brand {
-            width: 100%;
-            padding: 1rem 1.5rem;
-            background-color: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 20px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        .input-brand:focus {
-            outline: none;
-            border-color: #E20613;
-            box-shadow: 0 0 0 4px rgba(226, 6, 19, 0.1);
-        }
-        .btn-primary {
-            background-color: #E20613;
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 24px;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 25px -5px rgba(226, 6, 19, 0.2);
-        }
-        .view-hidden { display: none; }
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(255,255,255,0.8);
-            backdrop-filter: blur(8px);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        /* TU DISEÑO INTACTO */
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; background-color: #F8FAFC; }
+        .view-active { display: flex !important; animation: fadeIn 0.4s ease-out; }
+        .view-hidden { display: none !important; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .squircle { border-radius: 2.5rem; }
+        .btn-primary { background: #E30613; color: white; border-radius: 1.25rem; font-weight: 700; transition: all 0.3s; }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
     </style>
 </head>
-<body class="bg-[#F8FAFC] text-slate-900 min-h-screen">
-
-    <div id="loading" class="loading-overlay hidden">
-        <div class="flex flex-col items-center">
-            <div class="w-12 h-12 border-4 border-slate-200 border-t-[#E20613] rounded-full animate-spin"></div>
-            <p class="mt-4 font-bold text-slate-400 text-xs uppercase tracking-[0.3em]">Procesando</p>
+<body>
+    <div id="app-root" class="max-w-[480px] mx-auto min-h-screen relative">
+        <div id="loading-overlay" class="hidden fixed inset-0 z-[100] bg-white/80 backdrop-blur-md flex-col items-center justify-center">
+            <div class="w-12 h-12 border-4 border-slate-100 border-t-[#E30613] rounded-full animate-spin"></div>
         </div>
-    </div>
 
-    <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-2xl border border-white p-2 rounded-[32px] shadow-2xl z-50 flex gap-1">
-        <button onclick="switchTab('dashboard')" class="nav-btn p-4 rounded-3xl transition-all" id="nav-dashboard">
-            <i data-lucide="layout-grid"></i>
-        </button>
-        <button onclick="switchTab('units')" class="nav-btn p-4 rounded-3xl transition-all" id="nav-units">
-            <i data-lucide="truck"></i>
-        </button>
-        <button onclick="switchTab('crew')" class="nav-btn p-4 rounded-3xl transition-all" id="nav-crew">
-            <i data-lucide="users"></i>
-        </button>
-        <button onclick="logout()" class="p-4 rounded-3xl text-slate-300 hover:text-red-500 transition-all">
-            <i data-lucide="log-out"></i>
-        </button>
-    </nav>
-
-    <main class="max-w-5xl mx-auto px-6 pt-12 pb-32">
-        <header class="flex justify-between items-center mb-12">
-            <div>
-                <p class="text-[10px] font-black text-[#E20613] uppercase tracking-[0.4em] mb-2">Panel Operativo</p>
-                <h1 id="company-name" class="text-3xl font-black tracking-tight text-slate-900">Cargando...</h1>
+        <div id="view-login" class="view-active flex-col p-8 pt-20 space-y-8">
+            <div class="space-y-2 text-center">
+                <h1 class="text-3xl font-black text-slate-900 tracking-tight">¡Hola de nuevo!</h1>
+                <p class="text-slate-500 font-medium">Ingresa a tu panel de tripulante</p>
             </div>
-            <div class="flex items-center gap-4">
-                <div class="text-right">
-                    <p id="user-name" class="font-bold text-slate-900 leading-none">Usuario</p>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Asistente</p>
-                </div>
-                <div class="w-14 h-14 bg-white rounded-[22px] shadow-sm border border-slate-100 flex items-center justify-center text-[#E20613]">
-                    <i data-lucide="shield-check" size="28"></i>
-                </div>
+            <div class="space-y-4">
+                <input type="text" id="login-dni" placeholder="DNI" class="w-full p-5 bg-white border border-slate-100 squircle shadow-sm focus:border-[#E30613] outline-none transition-all">
+                <input type="password" id="login-pass" placeholder="Contraseña" class="w-full p-5 bg-white border border-slate-100 squircle shadow-sm focus:border-[#E30613] outline-none transition-all">
+                <button onclick="handleLogin()" class="w-full py-5 btn-primary shadow-xl shadow-red-100">Iniciar Sesión</button>
+                <button onclick="switchView('dni-check')" class="w-full text-slate-400 font-bold text-sm py-2">¿No tienes cuenta? Regístrate</button>
             </div>
-        </header>
+        </div>
 
-        <section id="view-dashboard" class="space-y-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="card-brand">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Cumplimiento Unidades</p>
-                    <div class="flex items-end gap-2">
-                        <span id="stat-units" class="text-4xl font-black text-slate-900">0%</span>
-                        <div id="trend-units" class="mb-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">↑ 0%</div>
+        <div id="view-dni-check" class="view-hidden flex-col p-8 pt-20 space-y-8">
+            <button onclick="switchView('login')" class="w-12 h-12 flex items-center justify-center bg-white border border-slate-100 rounded-2xl text-slate-400"><i data-lucide="chevron-left"></i></button>
+            <div class="space-y-2">
+                <h2 class="text-2xl font-black text-slate-900">Validar Identidad</h2>
+                <p class="text-slate-500 font-medium">Verificaremos si estás en nuestra base operativa.</p>
+            </div>
+            <input type="text" id="check-dni-input" placeholder="Ingresa tu DNI" class="w-full p-5 bg-white border border-slate-100 squircle shadow-sm outline-none">
+            <button onclick="handleDniCheck()" class="w-full py-5 btn-primary">Verificar DNI</button>
+        </div>
+
+        <div id="view-dashboard" class="view-hidden flex-col pb-24">
+            <div class="p-8 bg-white border-b border-slate-50 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-xl shadow-lg" id="avatar-initials">--</div>
+                    <div>
+                        <p id="dash-user-name" class="font-black text-slate-900 leading-tight">Cargando...</p>
+                        <p id="dash-user-cargo" class="text-[10px] font-black text-[#E30613] uppercase tracking-widest mt-1">Cargando...</p>
                     </div>
                 </div>
-                </div>
-            
-            <div class="card-brand">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-xl font-black text-slate-900">Acciones Urgentes</h3>
-                    <button onclick="loadData()" class="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-[#E20613] transition-all">
-                        <i data-lucide="refresh-cw" size="20"></i>
-                    </button>
-                </div>
-                <div id="pending-docs-list" class="space-y-4">
+                <button onclick="handleLogout()" class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400"><i data-lucide="log-out" size="20"></i></button>
+            </div>
+
+            <div class="p-8 space-y-8">
+                <div class="bg-white p-8 squircle border border-slate-50 shadow-sm flex items-center justify-between">
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Mi Estado</p>
+                        <h3 id="dash-compl-label" class="text-lg font-black text-slate-900">ANALIZANDO...</h3>
                     </div>
-            </div>
-        </section>
+                    <div class="relative w-24 h-24">
+                        <svg class="w-full h-full transform -rotate-90">
+                            <circle cx="48" cy="48" r="42" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-100"/>
+                            <circle id="dash-compl-circle" cx="48" cy="48" r="42" stroke="#E30613" stroke-width="8" fill="transparent" stroke-dasharray="263.89" stroke-dashoffset="263.89" class="transition-all duration-1000 ease-out"/>
+                        </svg>
+                        <span id="dash-compl-text" class="absolute inset-0 flex items-center justify-center font-black text-xl text-slate-900">0%</span>
+                    </div>
+                </div>
 
-        <section id="view-units" class="view-hidden space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-black">Gestión de Unidades</h2>
-                <div class="flex gap-2">
-                    <input type="text" placeholder="Buscar placa..." class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#E20613]">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-black text-slate-900 text-lg">Mis Documentos</h3>
+                    <button onclick="handleRefresh()" class="p-2 text-[#E30613] font-bold text-sm flex items-center gap-1"><i data-lucide="rotate-cw" size="14"></i> Actualizar</button>
                 </div>
-            </div>
-            <div id="units-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-        </section>
-
-        <section id="view-crew" class="view-hidden space-y-6">
-            <h2 class="text-2xl font-black">Personal Operativo</h2>
-            <div id="crew-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-        </section>
-    </main>
-
-    <div id="modal-upload" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-6 hidden">
-        <div class="bg-white w-full max-w-xl rounded-[40px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
-            <div class="p-8 border-b border-slate-50 flex justify-between items-center">
-                <div>
-                    <h3 class="text-xl font-black text-slate-900">Actualizar Documento</h3>
-                    <p id="upload-target-name" class="text-sm text-slate-500 font-medium">Cargando...</p>
-                </div>
-                <button onclick="closeUpload()" class="p-2 text-slate-300 hover:text-slate-900 transition-all"><i data-lucide="x"></i></button>
-            </div>
-            <div class="p-8 space-y-6">
-                <div class="space-y-2">
-                    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha de Vencimiento</label>
-                    <input type="date" id="upload-expiry" class="input-brand">
-                </div>
-                <div onclick="document.getElementById('file-input').click()" class="p-10 border-2 border-dashed border-slate-100 rounded-[32px] bg-[#F8FAFC] flex flex-col items-center justify-center text-center cursor-pointer group hover:bg-red-50 hover:border-red-100 transition-all">
-                    <input type="file" id="file-input" class="hidden" onchange="handleFileSelect(this)">
-                    <div id="file-preview-icon" class="p-5 bg-white rounded-3xl text-slate-300 group-hover:text-[#E20613] shadow-sm mb-4"><i data-lucide="upload" size="32"></i></div>
-                    <p id="file-name" class="font-bold text-slate-600">Seleccionar o Arrastrar Archivo</p>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">PDF, JPG o PNG • MAX 10MB</p>
-                </div>
-            </div>
-            <div class="p-8 bg-slate-50 flex gap-4">
-                <button onclick="closeUpload()" class="flex-1 py-4 text-slate-500 font-bold hover:text-slate-900 transition-all">Cancelar</button>
-                <button onclick="submitUpload()" id="btn-sync-doc" class="flex-[2] btn-primary">Sincronizar Datos</button>
+                <div id="docs-container" class="space-y-4">
+                    </div>
             </div>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>

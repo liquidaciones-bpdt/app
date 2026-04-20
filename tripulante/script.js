@@ -1,35 +1,73 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbyPXQDIVDOmeiPEH0tQ_ALH7wDqccLUXarTiyp4eFi9hS7bP70NEbgj6ORd3uBgwYzh/exec";
+const API_URL = "URL_DE_TU_WEB_APP_DEPLOYADA"; // CAMBIAR ESTO
 
-async function apiCall(action, payload = {}) {
-  const token = localStorage.getItem("token");
+let state = {
+    user: null,
+    isLoading: false
+};
 
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({ action, payload, token })
-  });
+const apiCall = async (action, payload) => {
+    showLoading(true);
+    try {
+        const resp = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action, payload })
+        });
+        const res = await resp.json();
+        if (!res.success) throw new Error(res.message);
+        return res.data;
+    } catch (e) {
+        alert("Error: " + e.message);
+        return null;
+    } finally {
+        showLoading(false);
+    }
+};
 
-  const data = await res.json();
-
-  if (!data.success) throw new Error(data.message);
-
-  return data.data;
+function showLoading(show) {
+    document.getElementById('loading-overlay').classList.toggle('hidden', !show);
 }
 
-// LOGIN
+function switchView(view) {
+    document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.replace('view-active', 'view-hidden'));
+    document.getElementById(`view-${view}`).classList.replace('view-hidden', 'view-active');
+    lucide.createIcons();
+}
+
 async function handleLogin() {
-  const dni = document.getElementById("login-dni").value;
-  const password = document.getElementById("login-pass").value;
-
-  const res = await apiCall("login", { dni, password });
-
-  localStorage.setItem("token", res.token);
-  localStorage.setItem("user", JSON.stringify(res.user));
-
-  location.reload();
+    const dni = document.getElementById('login-dni').value;
+    const pass = document.getElementById('login-pass').value;
+    const data = await apiCall('login', { dni, pass });
+    if (data) {
+        state.user = data;
+        renderDashboard();
+        switchView('dashboard');
+    }
 }
 
-// DATA
-async function loadTripulante() {
-  const data = await apiCall("getTripulante");
-  renderData(data);
+async function handleDniCheck() {
+    const dni = document.getElementById('check-dni-input').value;
+    const res = await apiCall('checkDniStatus', { dni });
+    if (res.status === 'EXISTS') alert("Ya tienes cuenta, inicia sesión.");
+    else if (res.status === 'NEW') alert("No registrado en base operativa.");
+    else switchView('register'); // Aquí abrirías tu vista de registro
 }
+
+function renderDashboard() {
+    const { user } = state;
+    document.getElementById('dash-user-name').innerHTML = `${user.nombres}<br>${user.apellidos}`;
+    document.getElementById('dash-user-cargo').innerText = user.cargo;
+    document.getElementById('avatar-initials').innerText = user.nombres[0] + user.apellidos[0];
+    
+    const compliance = user.compliance || 0;
+    document.getElementById('dash-compl-text').innerText = `${compliance}%`;
+    const offset = 263.89 - (263.89 * compliance) / 100;
+    document.getElementById('dash-compl-circle').style.strokeDashoffset = offset;
+    document.getElementById('dash-compl-label').innerText = compliance >= 80 ? 'EXCELENTE' : 'PENDIENTE';
+}
+
+function handleLogout() {
+    state.user = null;
+    switchView('login');
+}
+
+window.onload = () => lucide.createIcons();

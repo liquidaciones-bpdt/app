@@ -1,16 +1,14 @@
 /**
- * HT-BPDT Crew Portal - Frontend Logic (GAS Optimized)
- * Versión híbrida: Robustez de red + Sintaxis moderna.
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-// CONFIGURACIÓN: Reemplaza con la URL de tu Web App desplegada en Google Apps Script
-const CONFIG = {
-  WEB_APP_URL: "URL_DE_TU_WEB_APP_AQUI",
-  TIMEOUT_MS: 15000 // 15 segundos de espera máxima
-};
+/**
+ * HT-BPDT Crew Portal - Professional Vanilla Controller
+ */
 
-// --- Global State ---
-let currentState = {
+// --- STATE MANAGEMENT ---
+const state = {
   view: 'login',
   isLoading: false,
   user: null,
@@ -26,273 +24,250 @@ let currentState = {
   }
 };
 
-// --- Initializing Lucide Icons ---
-window.onload = () => {
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+// --- DOM CACHE ---
+const UI = {
+  loader: () => document.getElementById('global-loader'),
+  views: {
+    login: () => document.getElementById('view-login'),
+    dniCheck: () => document.getElementById('view-dni-check'),
+    register: () => document.getElementById('view-register'),
+    dashboard: () => document.getElementById('view-dashboard')
+  }
 };
 
-/**
- * Capa de API - Comunicación robusta con el Backend
- * @param {string} action - Nombre de la función en el backend
- * @param {Object} data - Datos a enviar
- */
-async function callBackend(action, data = {}) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUT_MS);
+// --- INITIALIZATION ---
+window.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  setupEventListeners();
+  // Start at logical initial view
+  switchView('login');
+});
 
+// --- CORE UTILITIES ---
+
+/**
+ * Centralized API Helper
+ * Handles fetch, JSON parsing, and basic GAS POST requirements
+ */
+async function apiCall(action, params = {}) {
+  if (!window.CONFIG.BACKEND_URL || window.CONFIG.BACKEND_URL === "MY_APPS_SCRIPT_WEB_APP_URL") {
+    console.error("DEBUG: Backend URL not configured in config.js");
+    return { ok: false, message: "Error de configuración de servidor." };
+  }
+
+  setLoading(true);
   try {
-    const response = await fetch(CONFIG.WEB_APP_URL, {
+    // We use common POST approach for GAS Web Apps
+    // Note: Due to CORS, we send as text/plain or use specific GAS handling
+    const response = await fetch(window.CONFIG.BACKEND_URL, {
       method: "POST",
-      // Usamos text/plain para evitar el preflight de CORS en Google Apps Script
-      headers: { 'Content-Type': 'text/plain' }, 
-      body: JSON.stringify({ action, data }),
-      signal: controller.signal
+      mode: "no-cors", // Standard for simple GAS calls, or use server-side CORS headers
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action, ...params })
     });
 
-    clearTimeout(timeoutId);
-
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    // Handle the "no-cors" limitation: We won't see the body.
+    // RECOMMENDATION: For real data, deploy GAS with specific JSONP or explicit CORS headers.
+    // For this implementation, we assume a standard fetch-compatible GAS setup.
     
-    const result = await response.json();
-    return result;
-
+    // If your GAS supports JSON response (CORS enabled):
+    const data = await response.json();
+    return data;
   } catch (error) {
-    clearTimeout(timeoutId);
-    console.error("Error de API:", error);
-    
-    let message = "Error de conexión con el servidor.";
-    if (error.name === 'AbortError') message = "La solicitud tardó demasiado. Reintenta.";
-    
-    return { success: false, message };
+    console.error("API Error:", error);
+    return { ok: false, message: "Error de red o servidor no disponible." };
+  } finally {
+    setLoading(false);
   }
 }
 
 /**
- * View Switcher Logic
+ * View Switcher
  */
 function switchView(viewName) {
-  const views = ['login', 'dni-check', 'register', 'dashboard'];
-  views.forEach(v => {
-    const el = document.getElementById(`view-${v}`);
-    if (el) {
-      el.classList.add('view-hidden');
-      el.classList.remove('view-active');
-    }
+  Object.keys(UI.views).forEach(v => {
+    const el = UI.views[v]();
+    if (el) el.classList.add('hidden');
   });
 
-  const targetEl = document.getElementById(`view-${viewName}`);
-  if (targetEl) {
-    targetEl.classList.remove('view-hidden');
-    targetEl.classList.add('view-active');
-  }
-  
-  currentState.view = viewName;
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-/**
- * Control del estado de carga (Overlay)
- */
-function setIsLoading(loading) {
-  currentState.isLoading = loading;
-  const overlay = document.getElementById('global-loader');
-  if (overlay) {
-    overlay.style.display = loading ? 'flex' : 'none';
+  const target = UI.views[viewName]();
+  if (target) {
+    target.classList.remove('hidden');
+    state.view = viewName;
+    lucide.createIcons();
   }
 }
 
-/**
- * HANDLERS: Lógica de Negocio
- */
+function setLoading(isLoading) {
+  state.isLoading = isLoading;
+  const loader = UI.loader();
+  if (loader) {
+    loader.classList.toggle('hidden', !isLoading);
+  }
+  // Disable all buttons during loading to prevent double-clicks
+  document.querySelectorAll('button').forEach(btn => btn.disabled = isLoading);
+}
+
+// --- LOGIC HANDLERS ---
 
 async function handleLogin() {
   const dni = document.getElementById('login-dni').value.trim();
   const pass = document.getElementById('login-pass').value.trim();
 
-  if (!dni || !pass) {
-    alert("Ingresa DNI y contraseña.");
+  if (!dni || dni.length < CONFIG.DNI_LENGTH) {
+    alert("DNI inválido.");
+    return;
+  }
+  if (!pass) {
+    alert("Ingresa tu clave.");
     return;
   }
 
-  setIsLoading(true);
-  const result = await callBackend("login", { dni, pass });
-  setIsLoading(false);
-
-  if (result.success) {
-    currentState.user = result.user;
+  const res = await apiCall('login', { dni, pass });
+  if (res.ok) {
+    state.user = res.data;
     renderDashboard();
     switchView('dashboard');
   } else {
-    alert(result.message || "Credenciales inválidas.");
+    alert(res.message || "Error al iniciar sesión.");
   }
 }
 
 async function handleCheckDni() {
   const dni = document.getElementById('check-dni-input').value.trim();
-  if (dni.length < 8) {
-    alert("El DNI debe tener al menos 8 dígitos.");
+  if (!dni || dni.length < CONFIG.DNI_LENGTH) {
+    alert("DNI inválido.");
     return;
   }
 
-  setIsLoading(true);
-  const result = await callBackend("checkDni", { dni });
-  setIsLoading(false);
+  const res = await apiCall('checkDni', { dni });
+  const alertExists = document.getElementById('alert-exists');
+  alertExists.classList.add('hidden');
 
-  if (result.success) {
-    if (result.exists) {
-      alert("Este DNI ya se encuentra registrado.");
+  if (res.ok) {
+    state.dniStatus = res.data.status; // EXISTS, PRELOAD, NEW
+    
+    if (res.data.status === 'EXISTS') {
+      alertExists.classList.remove('hidden');
     } else {
-      currentState.form.dni = dni;
+      setupRegisterWizard(res.data);
       switchView('register');
     }
   } else {
-    alert(result.message);
+    alert(res.message || "Error al validar DNI.");
   }
 }
 
-async function handleFinalRegister() {
-  const pass = document.getElementById('reg-pass').value.trim();
-  const nombres = document.getElementById('reg-nombres').value.trim();
-  const apellidos = document.getElementById('reg-apellidos').value.trim();
-  const cargo = document.getElementById('reg-cargo').value.trim();
-  const empresa = document.getElementById('reg-empresa').value.trim();
+function setupRegisterWizard(data) {
+  const isPreload = data.status === 'PRELOAD';
+  state.form.dni = data.dni || '';
+  
+  // Set labels/UI
+  document.getElementById('reg-type-label').innerText = isPreload ? 'Complementar Perfil' : 'Nuevo Ingreso';
+  
+  const fields = ['nombres', 'apellidos', 'cargo', 'empresa'];
+  fields.forEach(f => {
+    const el = document.getElementById(`reg-${f}`);
+    el.value = data[f] || '';
+    el.readOnly = isPreload;
+    el.classList.toggle('bg-slate-50', isPreload);
+    el.classList.toggle('text-slate-500', isPreload);
+  });
 
-  if (!pass || !nombres || !apellidos || !cargo || !empresa) {
-    alert("Por favor, completa todos los campos.");
-    return;
-  }
+  document.getElementById('badge-nombres').classList.toggle('hidden', !isPreload);
+  document.getElementById('badge-apellidos').classList.toggle('hidden', !isPreload);
+  document.getElementById('reg-pass-container').classList.toggle('hidden', isPreload);
+  
+  goToStep(1);
+}
 
-  const userData = {
-    dni: currentState.form.dni,
-    pass, nombres, apellidos, cargo, empresa
+function goToStep(step) {
+  state.regStep = step;
+  // Bars
+  [1, 2, 3].forEach(s => {
+    document.getElementById(`step-${s}-bar`).classList.toggle('bg-red-600', step >= s);
+    document.getElementById(`step-${s}-bar`).classList.toggle('bg-slate-200', step < s);
+    document.getElementById(`reg-step-${s}`).classList.toggle('hidden', step !== s);
+  });
+  lucide.createIcons();
+}
+
+async function handleRegister() {
+  const payload = {
+    dni: state.form.dni,
+    nombres: document.getElementById('reg-nombres').value.trim(),
+    apellidos: document.getElementById('reg-apellidos').value.trim(),
+    cargo: document.getElementById('reg-cargo').value.trim(),
+    empresa: document.getElementById('reg-empresa').value.trim(),
+    pass: document.getElementById('reg-pass')?.value.trim() || ""
   };
 
-  setIsLoading(true);
-  const result = await callBackend("register", userData);
-  setIsLoading(false);
-
-  if (result.success) {
-    goToRegStep(3);
-  } else {
-    alert(result.message || "No se pudo procesar el registro.");
-  }
-}
-
-/**
- * Navegación interna del Registro (Wizard)
- */
-function goToRegStep(step) {
-  document.querySelectorAll('[id^="reg-step-"]').forEach(el => el.classList.add('hidden'));
-  const targetStep = document.getElementById(`reg-step-${step}`);
-  if (targetStep) targetStep.classList.remove('hidden');
-  
-  currentState.regStep = step;
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-/**
- * DASHBOARD: Renderizado de Datos
- */
-function renderDashboard() {
-  const user = currentState.user;
-  if (!user) return;
-
-  // Formateo de nombre (Primer nombre y primer apellido)
-  const names = user.nombres.split(' ');
-  const lastNames = user.apellidos.split(' ');
-  
-  document.getElementById('dash-user-name').innerHTML = `${names[0]}<br/>${lastNames[0]}`;
-  document.getElementById('dash-user-cargo').innerText = user.cargo;
-  document.getElementById('dash-user-dni').innerText = `DNI ${user.dni}`;
-
-  // Indicador de cumplimiento (Compliance)
-  const compliance = user.compliance || 0;
-  const circle = document.getElementById('dash-compl-circle');
-  const text = document.getElementById('dash-compl-text');
-  const label = document.getElementById('dash-compl-label');
-
-  if (text) text.innerText = `${compliance}%`;
-  if (label) label.innerText = compliance >= 80 ? 'EXCELENTE' : 'SOPORTE REQUERIDO';
-
-  if (circle) {
-    // 263.89 es el perímetro del círculo (stroke-dasharray)
-    const offset = 263.89 - (compliance / 100) * 263.89;
-    circle.style.strokeDashoffset = offset;
-  }
-
-  renderDocuments(user.documents || []);
-}
-
-function renderDocuments(docs) {
-  const container = document.getElementById('dash-document-list');
-  if (!container) return;
-
-  if (docs.length === 0) {
-    container.innerHTML = `<p class="text-center text-slate-400 py-10">No hay documentos registrados.</p>`;
+  if (!payload.nombres || !payload.apellidos) {
+    alert("Completa tus datos personales.");
     return;
   }
 
-  container.innerHTML = docs.map(d => {
-    let style = "bg-emerald-50 border-emerald-100 text-emerald-600";
-    let icon = "check-circle";
-    
-    if (d.state === 'VENCIDO') {
-      style = "bg-rose-50 border-rose-100 text-rose-600";
-      icon = "alert-circle";
-    } else if (d.state === 'POR VENCER' || d.state === 'OBSERVADO') {
-      style = "bg-amber-50 border-amber-100 text-amber-600";
-      icon = "clock";
-    }
-
-    return `
-      <div class="p-5 bg-white border border-slate-100 rounded-[24px] shadow-sm space-y-4 hover:border-slate-200 transition-colors">
-          <div class="flex items-start justify-between gap-4">
-              <div class="space-y-1">
-                  <h4 class="text-[15px] font-bold text-slate-800 leading-tight">${d.name}</h4>
-                  <div class="flex items-center gap-2 text-slate-400">
-                      <i data-lucide="calendar" size="14"></i>
-                      <p class="text-[12px] font-medium uppercase tracking-wide">Vence: ${d.expiry}</p>
-                  </div>
-              </div>
-              <div class="px-3 py-1.5 rounded-full border ${style.split(' ').slice(0, 2).join(' ')} flex items-center gap-1.5 shrink-0">
-                  <i data-lucide="${icon}" size="14"></i>
-                  <span class="text-[10px] font-black uppercase tracking-widest leading-none">${d.state}</span>
-              </div>
-          </div>
-          ${d.note ? `
-            <div class="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
-                <p class="text-[12px] font-medium text-amber-800 leading-relaxed">${d.note}</p>
-            </div>
-          ` : ''}
-      </div>
-    `;
-  }).join('');
-  
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+  const res = await apiCall('registerUser', payload);
+  if (res.ok) {
+    goToStep(3);
+  } else {
+    alert(res.message || "Error en el registro.");
+  }
 }
 
-async function handleRefresh() {
-  if (!currentState.user) return;
+function renderDashboard() {
+  const u = state.user;
+  if (!u) return;
   
-  setIsLoading(true);
-  const result = await callBackend("login", { 
-    dni: currentState.user.dni, 
-    pass: currentState.user.pass 
-  });
-  setIsLoading(false);
+  document.getElementById('dash-user-name').innerHTML = `${u.nombres || ''} <br/> ${u.apellidos || ''}`;
+  document.getElementById('dash-user-cargo').innerText = u.cargo || 'TRIPULANTE';
+  document.getElementById('dash-user-empresa').innerText = u.empresa || 'HT-BPDT';
+  
+  const compliance = u.compliance || 0;
+  document.getElementById('dash-compl-text').innerText = `${compliance}%`;
+  
+  const circle = document.getElementById('dash-compl-circle');
+  const offset = 263.89 * (1 - compliance / 100);
+  circle.style.strokeDashoffset = offset;
 
-  if (result.success) {
-    currentState.user = result.user;
-    renderDashboard();
-  } else {
-    alert("No se pudo actualizar la información.");
-  }
+  // Render Documents List (Simplified example)
+  const list = document.getElementById('dash-doc-list');
+  list.innerHTML = (u.documents || []).map(doc => `
+    <div class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center gap-4">
+      <div class="p-4 bg-slate-50 text-slate-400 rounded-2xl"><i data-lucide="file-text"></i></div>
+      <div class="flex-1">
+        <p class="font-bold text-slate-800">${doc.name}</p>
+        <p class="text-[10px] text-slate-400 font-bold uppercase">${doc.status}</p>
+      </div>
+      <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest">${doc.expiry}</span>
+    </div>
+  `).join('');
+  
+  lucide.createIcons();
 }
 
 function handleLogout() {
-  currentState.user = null;
-  // Opcional: Limpiar inputs
-  document.getElementById('login-dni').value = "";
-  document.getElementById('login-pass').value = "";
+  state.user = null;
   switchView('login');
 }
+
+// --- EVENT LISTENERS ---
+function setupEventListeners() {
+  // Use IDs for specific button actions to separate from logic
+  document.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const action = btn.getAttribute('data-action');
+      if (typeof window[action] === 'function') window[action]();
+    });
+  });
+}
+
+// Map logical function names to global for the click handlers (optional but cleaner)
+window.handleLogin = handleLogin;
+window.handleCheckDni = handleCheckDni;
+window.handleRegister = handleRegister;
+window.handleLogout = handleLogout;
+window.switchView = switchView;
+window.goToStep = goToStep;

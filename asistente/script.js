@@ -523,8 +523,9 @@ window.app = {
             if (res.data?.user) {
                 state.user = res.data.user;
                 localStorage.setItem(SESSION_KEY, JSON.stringify(res.data.user));
+                ui.showApp();
             }
-
+            
             ui.renderCurrentTab();
 
         } catch (error) {

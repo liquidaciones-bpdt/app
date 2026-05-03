@@ -6,12 +6,24 @@ import CONFIG from './config.js';
  */
 
 // ===============================
-// ESTADO GLOBAL
+// SESIÓN SEGURA
 // ===============================
 const SESSION_KEY = 'htbpdt_asistente_session';
 
+function getStoredSession() {
+    try {
+        return JSON.parse(localStorage.getItem(SESSION_KEY)) || null;
+    } catch {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+    }
+}
+
+// ===============================
+// ESTADO GLOBAL
+// ===============================
 const state = {
-    user: JSON.parse(localStorage.getItem(SESSION_KEY)) || null,
+    user: getStoredSession(),
     activeTab: 'dashboard',
     lastData: null,
     isLoading: false
@@ -33,7 +45,7 @@ const utils = {
     clampPercent(value) {
         const n = Number(value);
         if (Number.isNaN(n)) return 0;
-        return Math.max(0, Math.min(100, n));
+        return Math.max(0, Math.min(100, Math.round(n)));
     },
 
     getAveragePercent(values = []) {
@@ -44,6 +56,12 @@ const utils = {
         if (!valid.length) return 0;
 
         return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+    },
+
+    createIcons() {
+        if (window.lucide) {
+            lucide.createIcons();
+        }
     }
 };
 
@@ -394,7 +412,7 @@ const ui = {
             }
         }
 
-        lucide.createIcons();
+        utils.createIcons();
     },
 
     renderFleet(units = []) {
@@ -468,6 +486,10 @@ window.app = {
         try {
             const res = await api.request('login', { dni, pass });
 
+            if (!res.data || !res.data.dni) {
+                throw new Error('El servidor no devolvió una sesión válida.');
+            }
+
             state.user = res.data;
             localStorage.setItem(SESSION_KEY, JSON.stringify(res.data));
 
@@ -480,6 +502,8 @@ window.app = {
         } catch (error) {
             localStorage.removeItem(SESSION_KEY);
             state.user = null;
+            state.lastData = null;
+            ui.showLogin();
         }
     },
 
@@ -495,10 +519,32 @@ window.app = {
             });
 
             state.lastData = res.data || {};
+
+            if (res.data?.user) {
+                state.user = res.data.user;
+                localStorage.setItem(SESSION_KEY, JSON.stringify(res.data.user));
+            }
+
             ui.renderCurrentTab();
 
         } catch (error) {
             console.error('Fallo la actualización de datos:', error);
+
+            const msg = String(error.message || '');
+
+            if (
+                msg.includes('Sesión inválida') ||
+                msg.includes('Usuario no encontrado') ||
+                msg.includes('Usuario inactivo') ||
+                msg.includes('No tiene permisos') ||
+                msg.includes('no tiene permiso')
+            ) {
+                localStorage.removeItem(SESSION_KEY);
+                state.user = null;
+                state.lastData = null;
+                state.activeTab = 'dashboard';
+                ui.showLogin();
+            }
         }
     },
 
@@ -523,7 +569,7 @@ window.app = {
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
     ui.ensureDynamicViews();
-    lucide.createIcons();
+    utils.createIcons();
 
     if (state.user) {
         ui.showApp();

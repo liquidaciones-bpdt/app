@@ -94,21 +94,21 @@
             </div>
 
             <nav class="flex-1 space-y-2">
-                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn text-white bg-[#E20613] shadow-xl shadow-red-200">
+                <button type="button" onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn text-white bg-[#E20613] shadow-xl shadow-red-200">
                     <i data-lucide="layout-dashboard" size="20"></i> Dashboard
                 </button>
-                <button onclick="switchTab('fleet')" id="nav-fleet" class="nav-btn text-slate-500 hover:bg-slate-50">
+                <button type="button" onclick="switchTab('fleet')" id="nav-fleet" class="nav-btn text-slate-500 hover:bg-slate-50">
                     <i data-lucide="truck" size="20"></i> Unidades
                 </button>
-                <button onclick="switchTab('crew')" id="nav-crew" class="nav-btn text-slate-500 hover:bg-slate-50">
+                <button type="button" onclick="switchTab('crew')" id="nav-crew" class="nav-btn text-slate-500 hover:bg-slate-50">
                     <i data-lucide="users" size="20"></i> Tripulación
                 </button>
-                <button onclick="switchTab('docs')" id="nav-docs" class="nav-btn text-slate-500 hover:bg-slate-50">
+                <button type="button" onclick="switchTab('docs')" id="nav-docs" class="nav-btn text-slate-500 hover:bg-slate-50">
                     <i data-lucide="file-text" size="20"></i> Documentos
                 </button>
             </nav>
 
-            <button onclick="logout()" class="mt-auto nav-btn text-slate-500 hover:bg-red-50 hover:text-[#E20613]">
+            <button type="button" onclick="logout()" class="mt-auto nav-btn text-slate-500 hover:bg-red-50 hover:text-[#E20613]">
                 <i data-lucide="log-out" size="20"></i> Cerrar Sesión
             </button>
         </aside>
@@ -125,7 +125,7 @@
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Empresa Activa</p>
                         <p id="user-empresa" class="font-black text-slate-900">CARGANDO...</p>
                     </div>
-                    <button onclick="refreshData()" class="p-3 bg-white border border-slate-100 rounded-full text-slate-400 hover:text-[#E20613] transition-all">
+                    <button type="button" onclick="refreshData()" class="p-3 bg-white border border-slate-100 rounded-full text-slate-400 hover:text-[#E20613] transition-all">
                         <i data-lucide="refresh-cw" size="20"></i>
                     </button>
                 </div>
@@ -189,11 +189,11 @@
                 <div class="space-y-4">
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">DNI Administrador</label>
-                        <input id="login-dni" type="text" placeholder="Ingresa tu DNI" class="input-brand" required>
+                        <input id="login-dni" name="dni" autocomplete="username" inputmode="numeric" type="text" placeholder="Ingresa tu DNI" class="input-brand" required>
                     </div>
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Clave de Acceso</label>
-                        <input id="login-pass" type="password" placeholder="••••••••" class="input-brand" required>
+                        <input id="login-pass" name="password" autocomplete="current-password" type="password" placeholder="••••••••" class="input-brand" required>
                     </div>
                 </div>
                 <button type="submit" class="w-full btn-primary py-5">ENTRAR AL SISTEMA</button>

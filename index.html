@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BPdT — Asistente de Transporte</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-[#F8FAFC] text-[#1e293b]">
+  <div id="app-loader" class="fixed inset-0 z-[1000] bg-white/90 backdrop-blur-md flex-col items-center justify-center p-6 hidden">
+    <div class="text-center space-y-6"><svg class="animate-spin w-16 h-16 text-[#E20613] mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-10" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><p id="app-loader-message" class="text-xl font-black text-slate-900 tracking-tight italic">Cargando...</p></div>
+  </div>
+  <div id="app-container" class="flex min-h-screen hidden">
+    <aside class="fixed left-0 top-0 h-full w-[280px] bg-white border-r border-[#f1f5f9] p-8 flex flex-col z-50">
+      <div class="flex items-center gap-4 mb-12"><div class="p-3 bg-[#E20613] rounded-2xl text-white"><i data-lucide="truck" size="24" stroke-width="2.5"></i></div><h1 class="text-lg font-black text-slate-900 leading-tight uppercase tracking-tight">HT-BPDT Portal</h1></div>
+      <nav class="flex-1 space-y-2">
+        <button type="button" onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn text-white bg-[#E20613] shadow-xl shadow-red-200"><i data-lucide="layout-dashboard" size="20"></i> Dashboard</button>
+        <button type="button" onclick="switchTab('fleet')" id="nav-fleet" class="nav-btn text-slate-500 hover:bg-slate-50"><i data-lucide="truck" size="20"></i> Unidades</button>
+        <button type="button" onclick="switchTab('crew')" id="nav-crew" class="nav-btn text-slate-500 hover:bg-slate-50"><i data-lucide="users" size="20"></i> Tripulación</button>
+        <button type="button" onclick="switchTab('docs')" id="nav-docs" class="nav-btn text-slate-500 hover:bg-slate-50"><i data-lucide="file-text" size="20"></i> Documentos</button>
+      </nav>
+      <button type="button" onclick="logout()" class="mt-auto nav-btn text-slate-500 hover:bg-red-50 hover:text-[#E20613]"><i data-lucide="log-out" size="20"></i> Cerrar Sesión</button>
+    </aside>
+    <main class="flex-1 ml-[280px] p-12 max-w-[1400px]">
+      <header class="flex justify-between items-center mb-12"><div><h2 id="view-title" class="text-3xl font-black tracking-tighter text-slate-900 uppercase">Dashboard</h2><p class="text-slate-500 font-medium">Estado real de la operación.</p></div><div class="flex items-center gap-6"><div class="text-right"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Empresa Activa</p><p id="user-empresa" class="font-black text-slate-900">CARGANDO...</p></div><button type="button" onclick="refreshData()" class="p-3 bg-white border border-slate-100 rounded-full text-slate-400 hover:text-[#E20613] transition-all"><i data-lucide="refresh-cw" size="20"></i></button></div></header>
+      <div id="view-dashboard" class="view-section space-y-12"><div class="grid grid-cols-1 md:grid-cols-4 gap-8"><div class="card-brand flex flex-col justify-center items-center text-center"><div class="relative w-32 h-32 mb-4"><svg class="w-full h-full -rotate-90" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="transparent" stroke="#F1F5F9" stroke-width="10"></circle><circle id="compliance-ring" cx="50" cy="50" r="42" fill="transparent" stroke="#E20613" stroke-width="10" stroke-dasharray="263.89" stroke-dashoffset="263.89" stroke-linecap="round" class="transition-all duration-1000"></circle></svg><div class="absolute inset-0 flex items-center justify-center"><span id="compliance-val" class="text-3xl font-black text-slate-900">0%</span></div></div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cumplimiento</p></div></div><div class="card-brand"><h3 class="font-black text-xl mb-6">UNIDADES RECIENTES</h3><div id="fleet-summary-list" class="space-y-4"></div></div></div>
+      <div id="view-fleet" class="view-section hidden"><div class="card-brand p-0 overflow-hidden"><table class="w-full text-left"><thead class="bg-slate-50 border-b border-slate-100"><tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest"><th class="px-8 py-5">Placa</th><th class="px-8 py-5">Sistema</th><th class="px-8 py-5">Estado</th><th class="px-8 py-5">Documentación</th></tr></thead><tbody id="fleet-table-body"></tbody></table></div></div>
+    </main>
+  </div>
+  <div id="login-modal" class="fixed inset-0 z-[100] bg-[#F8FAFC] flex items-center justify-center p-6"><div class="w-full max-w-[440px] space-y-10"><div class="text-center"><div class="inline-flex items-center justify-center bg-[#E20613] rounded-3xl shadow-2xl p-6 text-white mb-6"><i data-lucide="shield-check" size="42"></i></div><h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase">Asistente BPDT</h1><p class="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs mt-2">Acceso Administrativo</p></div><form onsubmit="handleLogin(event)" class="card-brand space-y-8"><div class="space-y-4"><div class="space-y-2"><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">DNI Administrador</label><input id="login-dni" name="dni" autocomplete="username" inputmode="numeric" type="text" placeholder="Ingresa tu DNI" class="input-brand" required></div><div class="space-y-2"><label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Clave de Acceso</label><input id="login-pass" name="password" autocomplete="current-password" type="password" placeholder="••••••••" class="input-brand" required></div></div><button type="submit" class="w-full btn-primary py-5">ENTRAR AL SISTEMA</button></form></div></div>
+  <script type="module" src="script.js"></script>
+</body>
+</html>

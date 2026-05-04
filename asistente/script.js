@@ -1,10 +1,5 @@
 import CONFIG from './config.js';
 
-/**
- * HT-BPDT Asistente - Frontend GitHub Pages + Apps Script Web App
- * Mantiene UI/UX de referencia
- */
-
 const SESSION_KEY = 'htbpdt_asistente_session_v3';
 const REQUEST_TIMEOUT_MS = 25000;
 
@@ -25,9 +20,6 @@ const state = {
   refreshing: false
 };
 
-/**
- * SESSION
- */
 function getStoredSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
@@ -47,9 +39,6 @@ function getStoredSession() {
   }
 }
 
-/**
- * API WRAPPER - GitHub Pages + GAS Web App
- */
 const api = {
   async call(action, payload = {}) {
     if (!CONFIG.API_URL || CONFIG.API_URL.includes('XXXXXXXX')) {
@@ -65,10 +54,7 @@ const api = {
         headers: {
           'Content-Type': 'text/plain;charset=utf-8'
         },
-        body: JSON.stringify({
-          action,
-          payload
-        }),
+        body: JSON.stringify({ action, payload }),
         signal: controller.signal
       });
 
@@ -101,9 +87,6 @@ const api = {
   }
 };
 
-/**
- * HELPERS
- */
 function escapeHtml(value = '') {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -139,9 +122,6 @@ function refreshIcons() {
   if (window.lucide) lucide.createIcons();
 }
 
-/**
- * NAVIGATION
- */
 function switchTab(tabId) {
   state.activeTab = tabId;
 
@@ -181,9 +161,6 @@ function switchTab(tabId) {
   renderTab();
 }
 
-/**
- * AUTHENTICATION
- */
 async function handleLogin(event) {
   if (event) event.preventDefault();
 
@@ -198,10 +175,7 @@ async function handleLogin(event) {
   showLoader('Validando acceso seguro...');
 
   try {
-    const user = await api.call('login', {
-      dni,
-      pass
-    });
+    const user = await api.call('login', { dni, pass });
 
     state.user = user;
     localStorage.setItem(SESSION_KEY, JSON.stringify(user));
@@ -239,6 +213,12 @@ function setUserHeader(user) {
       .slice(0, 2)
       .toUpperCase() || 'HT';
   }
+
+  const rucEl = document.getElementById('company-ruc');
+  if (rucEl) rucEl.innerText = user?.empresa_ruc || 'CARGANDO...';
+
+  const razonEl = document.getElementById('company-razon-social');
+  if (razonEl) razonEl.innerText = empresaNombre;
 }
 
 function logout() {
@@ -258,9 +238,6 @@ function logout() {
   }, 900);
 }
 
-/**
- * DATA
- */
 async function reloadData() {
   await refreshData(true);
 }
@@ -279,9 +256,7 @@ async function refreshData(silent = false) {
   state.refreshing = true;
 
   try {
-    if (!silent) {
-      showLoader('Actualizando datos...');
-    }
+    if (!silent) showLoader('Actualizando datos...');
 
     if (btn) btn.classList.add('pointer-events-none', 'spinning');
 
@@ -373,11 +348,9 @@ function renderTab() {
   if (state.activeTab === 'fleet') renderFleet();
   if (state.activeTab === 'crew') renderCrew();
   if (state.activeTab === 'docs') renderDocs();
+  if (state.activeTab === 'company') renderCompany();
 }
 
-/**
- * DASHBOARD
- */
 function renderDashboard() {
   const { stats, units, crew } = state.data;
   if (!stats) return;
@@ -404,7 +377,7 @@ function renderDashboard() {
 
       const text = document.getElementById('expired-text');
       if (text) {
-        text.innerHTML = `Hay <strong>${stats.expiredTodayCount} documentos vencidos</strong> que requieren atención para evitar paralizaciones.`;
+        text.innerHTML = `Hay <strong>${stats.expiredTodayCount} documentos vencidos</strong> que requieren atención.`;
       }
     } else {
       alertEl.classList.add('hidden');
@@ -473,9 +446,6 @@ function renderStatBlock(id, label, val, color, sub, trend = '') {
   `;
 }
 
-/**
- * FLEET
- */
 function renderFleet() {
   const tbody = document.getElementById('fleet-table-body');
   if (!tbody) return;
@@ -485,21 +455,18 @@ function renderFleet() {
   let html = units.map(u => `
     <tr class="hover:bg-slate-50/50 transition-all">
       <td class="px-8 py-6 font-black text-slate-900">${escapeHtml(getUnitId(u))}</td>
-
       <td class="px-8 py-6">
         <div class="space-y-1">
           <p class="text-xs font-bold text-slate-600">${escapeHtml(u.sistema || '-')}</p>
           <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${escapeHtml(getUnitTipo(u))}</p>
         </div>
       </td>
-
       <td class="px-8 py-6">
         <div class="flex items-center gap-2 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
           <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
           ${escapeHtml(u.estado || 'ACTIVO')}
         </div>
       </td>
-
       <td class="px-8 py-6">
         <div class="flex items-center gap-4">
           <div class="flex-1 w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -508,7 +475,6 @@ function renderFleet() {
           <span class="text-sm font-black text-slate-900">${clampPercent(u.compliance)}%</span>
         </div>
       </td>
-
       <td class="px-8 py-6 text-right">
         <button onclick="toggleDropdown(event, '${escapeHtml(getUnitId(u))}')" class="btn-action-trigger">
           <i data-lucide="more-vertical" size="18"></i>
@@ -536,9 +502,6 @@ function renderFleet() {
   refreshIcons();
 }
 
-/**
- * CREW
- */
 function renderCrew() {
   const grid = document.getElementById('crew-grid');
   if (!grid) return;
@@ -580,14 +543,19 @@ function renderCrew() {
           </div>
         </div>
       `).join('')
-    : `<div class="col-span-3 p-8 text-center text-slate-400 font-bold">No hay tripulantes registrados.</div>`;
+    : `
+      <div class="col-span-3 flex flex-col items-center justify-center py-20 gap-6">
+        <p class="text-slate-400 font-bold">No hay tripulantes registrados.</p>
+        <button type="button" onclick="openCrewModal()" class="btn-primary">
+          <i data-lucide="plus" size="18"></i>
+          Registrar Tripulante
+        </button>
+      </div>
+    `;
 
   refreshIcons();
 }
 
-/**
- * DOCS
- */
 function filterDocs(type) {
   state.filterType = type;
 
@@ -632,7 +600,6 @@ function renderDocs() {
               <i data-lucide="clock" size="14"></i>
               <p class="text-xs font-medium">Vence: <span class="font-bold text-slate-700">${escapeHtml(d.expiryDate || 'N/A')}</span></p>
             </div>
-
             <div class="flex gap-2">
               <button onclick="${d.fileUrl ? `window.open('${escapeHtml(d.fileUrl)}', '_blank')` : ''}" class="flex-1 py-3 border border-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">
                 BAJAR
@@ -649,9 +616,16 @@ function renderDocs() {
   refreshIcons();
 }
 
-/**
- * UNIT MODAL
- */
+function renderCompany() {
+  setUserHeader(state.user);
+
+  const badge = document.getElementById('company-compliance-badge');
+  if (badge) {
+    const val = clampPercent(state.data.stats?.companyCompliance || 0);
+    badge.innerText = `${val}% CUMPLIMIENTO`;
+  }
+}
+
 function openUnitModal(id = null) {
   const modal = document.getElementById('unit-modal');
   const form = document.getElementById('unit-form');
@@ -659,7 +633,7 @@ function openUnitModal(id = null) {
   const modeInput = document.getElementById('unit-form-mode');
 
   if (!modal || !form) {
-    alert('No existe el modal de unidad en el HTML.');
+    console.error('Falta #unit-modal o #unit-form en index.html.');
     return;
   }
 
@@ -696,7 +670,6 @@ function openUnitModal(id = null) {
   } else {
     if (title) title.innerText = 'Registrar Unidad';
     if (modeInput) modeInput.value = 'create';
-
     placaInput.readOnly = false;
   }
 
@@ -720,7 +693,6 @@ function toggleLineaExclusiva(checked) {
     wrapper.classList.remove('hidden');
   } else {
     wrapper.classList.add('hidden');
-
     const linea = document.getElementById('form-unit-linea');
     if (linea) linea.value = '';
   }
@@ -772,12 +744,77 @@ async function handleUnitSubmit(e) {
   }
 }
 
-/**
- * UPLOAD MODAL
- */
+function openCrewModal() {
+  const modal = document.getElementById('crew-modal');
+  const form = document.getElementById('crew-form');
+  const placaSelect = document.getElementById('form-crew-placa');
+
+  if (!modal || !form) {
+    console.error('Falta #crew-modal o #crew-form en index.html.');
+    return;
+  }
+
+  form.reset();
+
+  if (placaSelect) {
+    placaSelect.innerHTML = '<option value="">Sin asignar</option>';
+
+    (state.data.units || []).forEach(unit => {
+      const option = document.createElement('option');
+      option.value = getUnitId(unit);
+      option.textContent = `${getUnitId(unit)} — ${unit.sistema || ''}`;
+      placaSelect.appendChild(option);
+    });
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  refreshIcons();
+}
+
+function closeCrewModal() {
+  document.getElementById('crew-modal')?.classList.add('hidden');
+  document.getElementById('crew-modal')?.classList.remove('flex');
+}
+
+async function handleCrewSubmit(event) {
+  event.preventDefault();
+
+  const payload = {
+    user: state.user,
+    dni: document.getElementById('form-crew-dni')?.value.trim(),
+    nombres: document.getElementById('form-crew-nombres')?.value.trim(),
+    apellidos: document.getElementById('form-crew-apellidos')?.value.trim(),
+    cargo: document.getElementById('form-crew-cargo')?.value.trim(),
+    placa: document.getElementById('form-crew-placa')?.value.trim(),
+    estado: 'ACTIVO'
+  };
+
+  if (!payload.dni || !payload.nombres || !payload.apellidos || !payload.cargo) {
+    alert('Complete DNI, nombres, apellidos y cargo.');
+    return;
+  }
+
+  setLoading(true, 'Registrando tripulante...');
+
+  try {
+    const res = await api.call('createCrew', payload);
+
+    closeCrewModal();
+    await reloadData();
+
+    alert(res?.message || 'Tripulante registrado correctamente.');
+
+  } catch (error) {
+    alert(error.message || 'Error registrando tripulante.');
+  } finally {
+    setLoading(false);
+  }
+}
+
 function openUpload(id, type) {
   const details = document.getElementById('upload-details');
-
   if (details) {
     details.innerHTML = `Sincronizando <strong>${escapeHtml(type)}</strong> para <strong>${escapeHtml(id)}</strong>`;
   }
@@ -791,9 +828,6 @@ function closeUpload() {
   document.getElementById('upload-modal')?.classList.remove('flex');
 }
 
-/**
- * DROPDOWN
- */
 function toggleDropdown(event, id) {
   event.stopPropagation();
 
@@ -819,11 +853,7 @@ function toggleDropdown(event, id) {
 
 function closeDropdown() {
   const dropdown = document.getElementById('global-dropdown');
-
-  if (dropdown) {
-    dropdown.style.display = 'none';
-  }
-
+  if (dropdown) dropdown.style.display = 'none';
   state.activeDocId = null;
 }
 
@@ -844,9 +874,6 @@ function handleMenuAction(action) {
   }
 }
 
-/**
- * UNIT DETAILS
- */
 function viewUnitDetails(id) {
   const unit = state.data.units.find(u => getUnitId(u) === id);
   const docs = state.data.docs.filter(d => d.entityId === id);
@@ -870,37 +897,22 @@ function viewUnitDetails(id) {
         </div>
       `;
     } else {
-      list.innerHTML = docs.map(d => {
-        const isExpired = d.status === 'VENCIDO' || d.status === 'OBSERVADO';
-        const statusColor = d.status === 'APROBADO' ? 'text-emerald-500' : (isExpired ? 'text-red-500' : 'text-amber-500');
-        const statusBg = d.status === 'APROBADO' ? 'bg-emerald-50' : (isExpired ? 'bg-red-50' : 'bg-amber-50');
-
-        return `
-          <div class="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-[32px] hover:shadow-lg transition-all group">
-            <div class="flex items-center gap-6">
-              <div class="w-14 h-14 ${statusBg} rounded-2xl flex items-center justify-center ${statusColor}">
-                <i data-lucide="file-text" size="24"></i>
-              </div>
-              <div>
-                <p class="font-black text-slate-900 leading-none">${escapeHtml(d.type)}</p>
-                <div class="flex items-center gap-2 mt-2">
-                  <span class="px-2 py-0.5 ${statusBg} ${statusColor} rounded text-[8px] font-black uppercase tracking-widest">${escapeHtml(d.status)}</span>
-                  <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">VENCE: ${escapeHtml(d.expiryDate || 'N/A')}</span>
-                </div>
-              </div>
+      list.innerHTML = docs.map(d => `
+        <div class="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-[32px] hover:shadow-lg transition-all group">
+          <div class="flex items-center gap-6">
+            <div class="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
+              <i data-lucide="file-text" size="24"></i>
             </div>
-
-            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-              <button onclick="${d.fileUrl ? `window.open('${escapeHtml(d.fileUrl)}', '_blank')` : ''}" class="p-3 bg-slate-50 text-slate-400 rounded-xl hover:text-[#E20613] hover:bg-red-50 transition-all">
-                <i data-lucide="download" size="18"></i>
-              </button>
-              <button onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}')" class="p-3 bg-[#E20613] text-white rounded-xl hover:bg-[#B90510] transition-all">
-                <i data-lucide="refresh-cw" size="18"></i>
-              </button>
+            <div>
+              <p class="font-black text-slate-900 leading-none">${escapeHtml(d.type)}</p>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="px-2 py-0.5 bg-amber-50 text-amber-500 rounded text-[8px] font-black uppercase tracking-widest">${escapeHtml(d.status)}</span>
+                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">VENCE: ${escapeHtml(d.expiryDate || 'N/A')}</span>
+              </div>
             </div>
           </div>
-        `;
-      }).join('');
+        </div>
+      `).join('');
     }
   }
 
@@ -915,9 +927,6 @@ function closeDetailsModal() {
   document.getElementById('details-modal')?.classList.remove('flex');
 }
 
-/**
- * LOADER
- */
 function showLoader(message = 'Procesando...') {
   const loader = document.getElementById('app-loader');
   const msgEl = document.getElementById('app-loader-message');
@@ -953,9 +962,6 @@ function setLoading(val, message) {
   else hideLoader();
 }
 
-/**
- * LISTENERS
- */
 window.addEventListener('click', e => {
   if (!e.target.closest('#global-dropdown')) {
     closeDropdown();
@@ -975,15 +981,17 @@ window.addEventListener('scroll', () => {
   }
 });
 
-/**
- * INIT
- */
 document.addEventListener('DOMContentLoaded', async () => {
   refreshIcons();
 
   const unitForm = document.getElementById('unit-form');
   if (unitForm) {
     unitForm.addEventListener('submit', handleUnitSubmit);
+  }
+
+  const crewForm = document.getElementById('crew-form');
+  if (crewForm) {
+    crewForm.addEventListener('submit', handleCrewSubmit);
   }
 
   if (state.user) {
@@ -999,9 +1007,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-/**
- * GLOBALS FOR HTML
- */
 window.switchTab = switchTab;
 window.handleLogin = handleLogin;
 window.logout = logout;
@@ -1013,6 +1018,9 @@ window.openUnitModal = openUnitModal;
 window.closeUnitModal = closeUnitModal;
 window.toggleLineaExclusiva = toggleLineaExclusiva;
 window.handleUnitSubmit = handleUnitSubmit;
+window.openCrewModal = openCrewModal;
+window.closeCrewModal = closeCrewModal;
+window.handleCrewSubmit = handleCrewSubmit;
 window.toggleDropdown = toggleDropdown;
 window.handleMenuAction = handleMenuAction;
 window.closeDetailsModal = closeDetailsModal;

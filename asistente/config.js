@@ -4,7 +4,7 @@
  */
 const CONFIG = {
     // Reemplaza esto con tu URL de "Implementación como Aplicación Web" (Web App URL)
-    API_URL: "https://script.google.com/macros/s/AKfycbxQUY5wvx7oy04j9soS2uQepKvjxOQuMuK0maUi1vVJBY8mvzMT1zxE18EJV3j_zBdQ/exec"
+    API_URL: "https://script.google.com/macros/s/AKfycbyhNWZ0-5jNJcmXtwOM9kvXyiEIL62vNCMvFGoDWtTwJQ98jP_2c3CjDz-bkB4tipR2/exec"
 };
 
 export default CONFIG;

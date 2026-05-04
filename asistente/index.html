@@ -153,7 +153,6 @@
 
 <body class="bg-[#F8FAFC] text-[#1e293b]">
 
-  <!-- GLOBAL APP LOADER -->
   <div id="app-loader" class="fixed inset-0 z-[1000] bg-white/90 backdrop-blur-md flex-col items-center justify-center p-6 hidden transition-all duration-300 opacity-0">
     <div class="text-center space-y-6">
       <div class="relative flex items-center justify-center">
@@ -173,10 +172,8 @@
     </div>
   </div>
 
-  <!-- MAIN APP WRAPPER -->
   <div id="app-container" class="flex min-h-screen hidden">
 
-    <!-- SIDEBAR -->
     <aside class="fixed left-0 top-0 h-full w-[280px] bg-white border-r border-[#f1f5f9] p-8 flex flex-col z-50">
       <div class="flex items-center gap-4 mb-12">
         <div class="p-3 bg-[#E20613] rounded-2xl text-white">
@@ -215,10 +212,8 @@
       </button>
     </aside>
 
-    <!-- MAIN CONTENT -->
     <main class="flex-1 ml-[280px] p-12 max-w-[1400px]">
 
-      <!-- HEADER -->
       <header class="sticky top-0 bg-white/80 backdrop-blur-md z-40 py-8 mb-6 -mx-12 px-12 flex justify-between items-center border-b border-transparent transition-all" id="main-header">
         <div>
           <h2 id="view-title" class="text-3xl font-black tracking-tighter text-slate-900 uppercase">Dashboard</h2>
@@ -243,7 +238,6 @@
         </div>
       </header>
 
-      <!-- DASHBOARD -->
       <div id="view-dashboard" class="view-section active space-y-12">
 
         <div id="expired-alert" class="bg-red-50 border border-red-100 p-8 rounded-[40px] items-center gap-6 shadow-xl shadow-red-100/50 hidden">
@@ -289,7 +283,6 @@
         </div>
       </div>
 
-      <!-- UNIDADES -->
       <div id="view-fleet" class="view-section space-y-8">
         <div class="card-brand p-0 overflow-hidden">
           <div class="p-8 border-b border-slate-50 flex flex-wrap gap-4 items-center bg-white sticky top-0 z-10">
@@ -316,12 +309,10 @@
         </div>
       </div>
 
-      <!-- TRIPULACIÓN -->
       <div id="view-crew" class="view-section space-y-8">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="crew-grid"></div>
       </div>
 
-      <!-- DOCUMENTOS -->
       <div id="view-docs" class="view-section space-y-8">
         <div class="flex gap-3 mb-8" id="docs-filters">
           <button type="button" onclick="filterDocs('all')" class="doc-filter-btn px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white shadow-xl">Todos</button>
@@ -333,7 +324,6 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="docs-grid"></div>
       </div>
 
-      <!-- EMPRESA -->
       <div id="view-company" class="view-section">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div class="lg:col-span-2 space-y-8">
@@ -379,7 +369,6 @@
     </main>
   </div>
 
-  <!-- MODAL: UNIT FORM -->
   <div id="unit-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
     <div class="w-full max-w-2xl bg-white rounded-[40px] shadow-2xl p-10 relative overflow-hidden">
       <button type="button" onclick="closeUnitModal()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900">
@@ -453,7 +442,64 @@
     </div>
   </div>
 
-  <!-- MODAL: UNIT DETAILS -->
+  <div id="crew-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
+    <div class="w-full max-w-2xl bg-white rounded-[40px] shadow-2xl p-10 relative overflow-hidden">
+      <button type="button" onclick="closeCrewModal()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900">
+        <i data-lucide="x" size="24"></i>
+      </button>
+
+      <div class="space-y-8">
+        <div>
+          <h3 class="text-2xl font-black text-slate-900 tracking-tight italic">Registrar Tripulante</h3>
+          <p class="text-slate-500 font-medium mt-1">Completa los datos básicos del tripulante.</p>
+        </div>
+
+        <form id="crew-form" onsubmit="handleCrewSubmit(event)" class="grid grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">DNI</label>
+            <input type="text" id="form-crew-dni" placeholder="12345678" class="input-brand" required>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Cargo</label>
+            <select id="form-crew-cargo" class="input-brand" required>
+              <option value="">Seleccionar...</option>
+              <option value="CONDUCTOR">CONDUCTOR</option>
+              <option value="AUXILIAR">AUXILIAR</option>
+              <option value="ESTIBADOR">ESTIBADOR</option>
+            </select>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nombres</label>
+            <input type="text" id="form-crew-nombres" placeholder="Ej: Juan Carlos" class="input-brand" required>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Apellidos</label>
+            <input type="text" id="form-crew-apellidos" placeholder="Ej: Pérez Ramos" class="input-brand" required>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Placa asignada</label>
+            <select id="form-crew-placa" class="input-brand">
+              <option value="">Sin asignar</option>
+            </select>
+          </div>
+
+          <div class="col-span-2 flex gap-4 pt-4">
+            <button type="button" onclick="closeCrewModal()" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
+              Cancelar
+            </button>
+            <button type="submit" class="flex-[2] btn-primary">
+              Guardar Tripulante
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <div id="details-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
     <div class="w-full max-w-3xl bg-white rounded-[40px] shadow-2xl p-10 relative max-h-[90vh] flex flex-col">
       <button type="button" onclick="closeDetailsModal()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900 z-10">
@@ -469,7 +515,6 @@
     </div>
   </div>
 
-  <!-- CONTEXTUAL DROPDOWN -->
   <div id="global-dropdown" class="dropdown-menu">
     <button type="button" onclick="handleMenuAction('details')" class="dropdown-item">
       <i data-lucide="eye" size="16"></i> Ver Detalles
@@ -482,7 +527,6 @@
     </button>
   </div>
 
-  <!-- LOGIN -->
   <div id="login-modal" class="fixed inset-0 z-[100] bg-[#F8FAFC] flex flex-col items-center justify-center p-6 pb-12">
     <div class="w-full max-w-[440px] space-y-12">
       <div class="text-center space-y-2">
@@ -518,7 +562,6 @@
     </div>
   </div>
 
-  <!-- MODAL: UPLOAD DOC -->
   <div id="upload-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
     <div class="w-full max-w-xl bg-white rounded-[40px] shadow-2xl p-10 relative">
       <button type="button" onclick="closeUpload()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900">

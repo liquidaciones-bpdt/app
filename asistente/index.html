@@ -382,62 +382,74 @@
         </div>
 
         <form id="unit-form" onsubmit="handleUnitSubmit(event)" class="grid grid-cols-2 gap-6">
-          <input type="hidden" id="unit-form-mode" value="create">
+  <input type="hidden" id="unit-form-mode" value="create">
 
-          <div class="space-y-2">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Placa</label>
-            <input type="text" id="form-unit-id" placeholder="ABC-123" class="input-brand" required>
-          </div>
+  <div class="space-y-2">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Placa</label>
+    <input type="text" id="form-unit-id" placeholder="ABC-123" class="input-brand" required>
+  </div>
 
-          <div class="space-y-2">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Sistema</label>
-            <select id="form-unit-sistema" class="input-brand" required>
-              <option value="ISOTERMICO">ISOTERMICO</option>
-              <option value="CLIMATIZADA">CLIMATIZADA</option>
-              <option value="BASICA">BASICA</option>
-            </select>
-          </div>
+  <div class="space-y-2">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Sistema</label>
+    <select id="form-unit-sistema" class="input-brand" required>
+      <option value="">Seleccionar...</option>
+      <option value="ISOTERMICO">ISOTERMICO</option>
+      <option value="CLIMATIZADA">CLIMATIZADA</option>
+      <option value="BASICA">BASICA</option>
+    </select>
+  </div>
 
-          <div class="space-y-2">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tipo de Unidad</label>
-            <input type="text" id="form-unit-tipo" placeholder="Ej: CAMION" class="input-brand" required>
-          </div>
+  <div class="space-y-2">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tipo de Unidad</label>
+    <input type="text" id="form-unit-tipo" placeholder="Ej: CAMION" class="input-brand" required>
+  </div>
 
-          <div class="space-y-2">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Marca</label>
-            <input type="text" id="form-unit-marca" placeholder="Ej: VOLVO" class="input-brand">
-          </div>
+  <div class="space-y-2">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Marca</label>
+    <input type="text" id="form-unit-marca" placeholder="Ej: VOLVO" class="input-brand" required>
+  </div>
 
-          <div class="space-y-2">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Modelo</label>
-            <input type="text" id="form-unit-modelo" placeholder="Ej: FH16" class="input-brand">
-          </div>
+  <div class="space-y-2">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Modelo</label>
+    <input type="text" id="form-unit-modelo" placeholder="Ej: FH16" class="input-brand" required>
+  </div>
 
-          <div class="space-y-2">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Capacidad</label>
-            <input type="text" id="form-unit-capacidad" placeholder="Ej: 15 TN" class="input-brand">
-          </div>
+  <div class="space-y-2">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Año</label>
+    <input type="number" id="form-unit-anio" placeholder="Ej: 2024" class="input-brand" min="1980" max="2100" required>
+  </div>
 
-          <div class="flex items-center gap-4 py-4">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Exclusiva</label>
-            <input type="checkbox" id="form-unit-exclusiva" onchange="toggleLineaExclusiva(this.checked)" class="w-6 h-6 accent-[#E20613]">
-          </div>
+  <div class="space-y-2">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Capacidad</label>
+    <input type="text" id="form-unit-capacidad" placeholder="Ej: 15 TN" class="input-brand" required>
+  </div>
 
-          <div id="wrapper-linea-exclusiva" class="space-y-2 hidden transition-all duration-300">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Línea Exclusiva</label>
-            <select id="form-unit-linea" class="input-brand">
-              <option value="">Seleccionar línea...</option>
-              <option value="Clinica">Clinica</option>
-              <option value="Tecno">Tecno</option>
-              <option value="Biopas">Biopas</option>
-            </select>
-          </div>
+  <div class="space-y-2">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Teléfono</label>
+    <input type="tel" id="form-unit-telefono" placeholder="Ej: 999999999" class="input-brand" required>
+  </div>
 
-          <div class="col-span-2 flex gap-4 pt-4">
-            <button type="button" onclick="closeUnitModal()" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">Cancelar</button>
-            <button type="submit" class="flex-[2] btn-primary">Guardar Cambios</button>
-          </div>
-        </form>
+  <div class="flex items-center gap-4 py-4">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Exclusiva</label>
+    <input type="checkbox" id="form-unit-exclusiva" onchange="toggleLineaExclusiva(this.checked)" class="w-6 h-6 accent-[#E20613]">
+  </div>
+
+  <div id="wrapper-linea-exclusiva" class="space-y-2 hidden transition-all duration-300">
+    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Línea Exclusiva</label>
+    <select id="form-unit-linea" class="input-brand">
+      <option value="">Seleccionar línea...</option>
+      <option value="Clinica">Clinica</option>
+      <option value="Tecno">Tecno</option>
+      <option value="Biopas">Biopas</option>
+    </select>
+  </div>
+
+  <div class="col-span-2 flex gap-4 pt-4">
+    <button type="button" onclick="closeUnitModal()" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">Cancelar</button>
+    <button type="submit" class="flex-[2] btn-primary">Guardar Cambios</button>
+  </div>
+</form>
+        
       </div>
     </div>
   </div>

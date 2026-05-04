@@ -17,6 +17,9 @@ const state = {
   },
   filterType: 'all',
   activeDocId: null,
+activeDocType: null,
+activeDocEntityId: null,
+activeDocEntityType: null,
   refreshing: false
 };
 
@@ -604,7 +607,7 @@ function renderDocs() {
               <button onclick="${d.fileUrl ? `window.open('${escapeHtml(d.fileUrl)}', '_blank')` : ''}" class="flex-1 py-3 border border-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">
                 BAJAR
               </button>
-              <button onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}')" class="flex-1 py-3 bg-[#E20613] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510] shadow-lg shadow-red-100">
+              <button onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}', '${escapeHtml(d.entityType)}')" class="flex-1 py-3 bg-[#E20613] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510] shadow-lg shadow-red-100">
                 SUBIR
               </button>
             </div>
@@ -813,11 +816,23 @@ async function handleCrewSubmit(event) {
   }
 }
 
-function openUpload(id, type) {
+function openUpload(id, type, entityType = '') {
+  state.activeDocEntityId = id;
+  state.activeDocType = type;
+  state.activeDocEntityType = entityType || state.filterType;
+
   const details = document.getElementById('upload-details');
   if (details) {
     details.innerHTML = `Sincronizando <strong>${escapeHtml(type)}</strong> para <strong>${escapeHtml(id)}</strong>`;
   }
+
+  const fileInput = document.getElementById('upload-file');
+  const fileLabel = document.getElementById('upload-file-label');
+  const expiryInput = document.getElementById('upload-expiry');
+
+  if (fileInput) fileInput.value = '';
+  if (fileLabel) fileLabel.innerText = 'Seleccionar o Arrastrar Archivo';
+  if (expiryInput) expiryInput.value = '';
 
   document.getElementById('upload-modal')?.classList.remove('hidden');
   document.getElementById('upload-modal')?.classList.add('flex');
@@ -826,6 +841,72 @@ function openUpload(id, type) {
 function closeUpload() {
   document.getElementById('upload-modal')?.classList.add('hidden');
   document.getElementById('upload-modal')?.classList.remove('flex');
+}
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const base64 = result.includes(',') ? result.split(',')[1] : result;
+      resolve(base64);
+    };
+
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleUploadDocument() {
+  const fileInput = document.getElementById('upload-file');
+  const expiryInput = document.getElementById('upload-expiry');
+
+  const file = fileInput?.files?.[0];
+
+  if (!file) {
+    alert('Seleccione un archivo.');
+    return;
+  }
+
+  if (!state.activeDocType || !state.activeDocEntityId || !state.activeDocEntityType) {
+    alert('No se pudo identificar el requisito documental.');
+    return;
+  }
+
+  const maxSizeMb = 10;
+  if (file.size > maxSizeMb * 1024 * 1024) {
+    alert('El archivo supera el máximo permitido de 10MB.');
+    return;
+  }
+
+  setLoading(true, 'Subiendo documento...');
+
+  try {
+    const fileBase64 = await fileToBase64(file);
+
+    const payload = {
+      user: state.user,
+      tipo_documento: state.activeDocType,
+      nexo_id: state.activeDocEntityId,
+      tipo_nexo: state.activeDocEntityType,
+      fileBase64,
+      fileName: file.name,
+      mimeType: file.type || 'application/pdf',
+      fecha_vencimiento: expiryInput?.value || ''
+    };
+
+    const res = await api.call('uploadDocument', payload);
+
+    closeUpload();
+    await reloadData();
+
+    alert(res?.message || 'Documento enviado a validación.');
+
+  } catch (error) {
+    alert(error.message || 'Error subiendo documento.');
+  } finally {
+    setLoading(false);
+  }
 }
 
 function toggleDropdown(event, id) {
@@ -984,6 +1065,17 @@ window.addEventListener('scroll', () => {
 document.addEventListener('DOMContentLoaded', async () => {
   refreshIcons();
 
+  const uploadFile = document.getElementById('upload-file');
+if (uploadFile) {
+  uploadFile.addEventListener('change', () => {
+    const label = document.getElementById('upload-file-label');
+    if (label) {
+      label.innerText = uploadFile.files?.[0]?.name || 'Seleccionar o Arrastrar Archivo';
+    }
+  });
+}
+  
+
   const unitForm = document.getElementById('unit-form');
   if (unitForm) {
     unitForm.addEventListener('submit', handleUnitSubmit);
@@ -1024,3 +1116,4 @@ window.handleCrewSubmit = handleCrewSubmit;
 window.toggleDropdown = toggleDropdown;
 window.handleMenuAction = handleMenuAction;
 window.closeDetailsModal = closeDetailsModal;
+window.handleUploadDocument = handleUploadDocument;

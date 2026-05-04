@@ -6,7 +6,7 @@
 const CONFIG = {
     // Replace with your Google Apps Script Web App URL after deployment
     // Example: https://script.google.com/macros/s/AKfycbz.../exec
-    WEB_APP_URL: "https://script.google.com/macros/s/AKfycbyX173uEpvtNTFjmvx9O3HoNwGNgYNYxR94oXeWUaC5H3XAQb8ZuVgkTjRWiFKBm-X2/exec",
+    WEB_APP_URL: "https://script.google.com/macros/s/AKfycbw5HblCVk5JP6RaCDKQAErzHEm06iceGjIrRl0UTUUBOXLZ4wUfnH1nxZd5aNlkBQVe/exec",
     
     // UI Constants
     ROLES: {

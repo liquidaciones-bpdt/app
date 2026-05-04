@@ -1,37 +1,56 @@
 import CONFIG from './config.js';
 
-/**
- * HT-BPDT — Portal Asistente
- * script.js corregido para GitHub Pages + Google Apps Script
- */
+const SESSION_KEY = 'htbpdt_asistente_session_v2';
+const REQUEST_TIMEOUT_MS = 25000;
+const DOC_ALERT_DAYS = 15;
 
-// ===============================
-// SESIÓN SEGURA
-// ===============================
-const SESSION_KEY = 'htbpdt_asistente_session';
+const TAB_LABELS = {
+    dashboard: 'Dashboard',
+    fleet: 'Unidades',
+    crew: 'Tripulacion',
+    docs: 'Documentos'
+};
+
+const ROLE_TAB_FALLBACK = {
+    TRIPULANTE: ['dashboard', 'docs'],
+    ASISTENTE: ['dashboard', 'fleet', 'crew', 'docs'],
+    VALIDADOR: ['dashboard', 'docs'],
+    ADMIN: ['dashboard', 'fleet', 'crew', 'docs']
+};
+
+const TAB_MODULE_MAP = {
+    fleet: 'UNIDADES',
+    crew: 'TRIPULACION',
+    docs: 'DOCUMENTOS'
+};
 
 function getStoredSession() {
     try {
-        return JSON.parse(localStorage.getItem(SESSION_KEY)) || null;
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw);
+        if (!parsed?.user?.dni && !parsed?.user?.usuarioId) {
+            localStorage.removeItem(SESSION_KEY);
+            return null;
+        }
+
+        return parsed;
     } catch {
         localStorage.removeItem(SESSION_KEY);
         return null;
     }
 }
 
-// ===============================
-// ESTADO GLOBAL
-// ===============================
 const state = {
-    user: getStoredSession(),
+    session: getStoredSession(),
+    user: getStoredSession()?.user || null,
+    permissions: getStoredSession()?.permissions || [],
     activeTab: 'dashboard',
-    lastData: null,
+    dashboard: null,
     isLoading: false
 };
 
-// ===============================
-// UTILIDADES
-// ===============================
 const utils = {
     escape(value = '') {
         return String(value ?? '')
@@ -42,563 +61,190 @@ const utils = {
             .replaceAll("'", '&#039;');
     },
 
+    normalizeKey(value = '') {
+        return String(value ?? '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '');
+    },
+
+    indexRow(row = {}) {
+        return Object.entries(row).reduce((acc, [key, value]) => {
+            acc[this.normalizeKey(key)] = value;
+            return acc;
+        }, {});
+    },
+
+    pick(row = {}, aliases = [], fallback = '') {
+        if (!row || typeof row !== 'object') return fallback;
+
+        for (const alias of aliases) {
+            if (row[alias] !== undefined && row[alias] !== null && row[alias] !== '') {
+                return row[alias];
+            }
+        }
+
+        const indexed = this.indexRow(row);
+        for (const alias of aliases) {
+            const normalized = this.normalizeKey(alias);
+            if (indexed[normalized] !== undefined && indexed[normalized] !== null && indexed[normalized] !== '') {
+                return indexed[normalized];
+            }
+        }
+
+        return fallback;
+    },
+
+    toText(value, fallback = '') {
+        if (value === null || value === undefined) return fallback;
+        return String(value).trim();
+    },
+
+    toNumber(value, fallback = 0) {
+        if (value === null || value === undefined || value === '') return fallback;
+        const parsed = Number(String(value).replace(',', '.'));
+        return Number.isFinite(parsed) ? parsed : fallback;
+    },
+
+    toBool(value) {
+        if (typeof value === 'boolean') return value;
+        const normalized = this.toText(value).toUpperCase();
+        return ['TRUE', '1', 'SI', 'YES', 'ACTIVO'].includes(normalized);
+    },
+
+    toDate(value) {
+        if (!value) return null;
+        if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+
+        const text = this.toText(value);
+        if (!text) return null;
+
+        const isoDate = new Date(text);
+        if (!Number.isNaN(isoDate.getTime())) return isoDate;
+
+        const match = text.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (!match) return null;
+
+        const [, dd, mm, yyyy] = match;
+        const year = yyyy.length === 2 ? `20${yyyy}` : yyyy;
+        const parsed = new Date(`${year}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}T00:00:00`);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    },
+
+    toIsoDate(value) {
+        const date = this.toDate(value);
+        if (!date) return '';
+        return date.toISOString().slice(0, 10);
+    },
+
     clampPercent(value) {
         const n = Number(value);
-        if (Number.isNaN(n)) return 0;
+        if (!Number.isFinite(n)) return 0;
         return Math.max(0, Math.min(100, Math.round(n)));
     },
 
-    getAveragePercent(values = []) {
+    average(values = []) {
         const valid = values
             .map(Number)
-            .filter(v => !Number.isNaN(v));
+            .filter(value => Number.isFinite(value));
 
         if (!valid.length) return 0;
+        return Math.round(valid.reduce((total, value) => total + value, 0) / valid.length);
+    },
 
-        return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+    daysUntil(dateValue) {
+        const date = this.toDate(dateValue);
+        if (!date) return null;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        date.setHours(0, 0, 0, 0);
+
+        return Math.round((date.getTime() - today.getTime()) / 86400000);
+    },
+
+    groupBy(list = [], keyFn) {
+        return list.reduce((acc, item) => {
+            const key = keyFn(item);
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(item);
+            return acc;
+        }, {});
     },
 
     createIcons() {
         if (window.lucide) {
-            lucide.createIcons();
+            window.lucide.createIcons();
         }
     }
 };
 
-// ===============================
-// API SERVICE
-// ===============================
-const api = {
-    async request(action, payload = {}) {
-        if (!CONFIG.API_URL || CONFIG.API_URL.includes('XXXXXXXX')) {
-            throw new Error('Backend no configurado. Revisa config.js.');
-        }
-
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 25000);
-
-        try {
-            ui.toggleGlobalLoader(true, 'Conectando con el servidor...');
-
-            const response = await fetch(CONFIG.API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8'
-                },
-                body: JSON.stringify({ action, payload }),
-                signal: controller.signal
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP_${response.status}`);
-            }
-
-            const result = await response.json();
-
-            if (!result.ok) {
-                throw new Error(result.message || 'El servidor rechazó la solicitud.');
-            }
-
-            return result;
-
-        } catch (error) {
-            const message = api.getFriendlyError(error);
-            ui.notify(message, 'error');
-            console.error(`API Error [${action}]:`, error);
-            throw error;
-
-        } finally {
-            clearTimeout(timeout);
-            ui.toggleGlobalLoader(false);
-        }
-    },
-
-    getFriendlyError(error) {
-        const msg = error?.message || '';
-
-        if (error.name === 'AbortError') {
-            return 'La solicitud tardó demasiado. Verifica si la información se guardó y vuelve a intentar.';
-        }
-
-        if (msg.includes('Failed to fetch')) {
-            return 'No se pudo conectar con Google Apps Script. Revisa internet, permisos, despliegue o URL del Web App.';
-        }
-
-        if (msg === 'HTTP_404') {
-            return 'Error de configuración: la URL del backend no existe o está mal copiada.';
-        }
-
-        if (msg === 'HTTP_500' || msg === 'HTTP_503') {
-            return 'El servidor está ocupado o tuvo un error temporal. Intenta nuevamente.';
-        }
-
-        return msg || 'Ocurrió un error inesperado.';
-    }
-};
-
-// ===============================
-// COMPONENTES HTML
-// ===============================
-const Components = {
-    ProgressBar(value) {
-        const percent = utils.clampPercent(value);
-
-        return `
-            <div class="flex items-center gap-3">
-                <div class="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full bg-emerald-500" style="width:${percent}%"></div>
-                </div>
-                <span class="text-xs font-bold">${percent}%</span>
-            </div>
-        `;
-    },
-
-    Empty(message) {
-        return `
-            <div class="p-8 text-center text-slate-400 font-bold text-sm">
-                ${utils.escape(message)}
-            </div>
-        `;
-    },
-
-    FleetRow(unit) {
-        const placa = unit.id || unit.placa || unit.Placa || '-';
-        const sistema = unit.sistema || unit.tipo_unidad || unit.tipo || unit.Sistema || '-';
-        const estado = unit.estado || unit.Estado || '-';
-        const compliance = unit.compliance ?? unit.cumplimiento ?? 0;
-
-        return `
-            <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
-                <td class="px-8 py-5 font-bold text-slate-900">${utils.escape(placa)}</td>
-                <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(sistema)}</td>
-                <td class="px-8 py-5 text-sm font-bold text-emerald-500">${utils.escape(estado)}</td>
-                <td class="px-8 py-5">${Components.ProgressBar(compliance)}</td>
-            </tr>
-        `;
-    },
-
-    CrewRow(person) {
-        const dni = person.dni || person.DNI || '-';
-        const nombre =
-            person.nombre ||
-            `${person.nombres || ''} ${person.apellidos || ''}`.trim() ||
-            person.Nombres ||
-            '-';
-
-        const cargo = person.cargo || person.Cargo || '-';
-        const compliance = person.compliance ?? person.cumplimiento ?? 0;
-
-        return `
-            <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
-                <td class="px-8 py-5 font-bold text-slate-900">${utils.escape(dni)}</td>
-                <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(nombre)}</td>
-                <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(cargo)}</td>
-                <td class="px-8 py-5">${Components.ProgressBar(compliance)}</td>
-            </tr>
-        `;
-    },
-
-    DocRow(doc) {
-        const tipo = doc.tipo_documento || doc.tipo || doc.documento || '-';
-        const nexo = doc.nexo_id || doc.nexo || doc.placa || doc.dni || '-';
-        const estado =
-            doc.estado_validacion ||
-            doc.estado_vigencia ||
-            doc.estado ||
-            doc.Estado ||
-            '-';
-
-        const vencimiento = doc.fecha_vencimiento || doc.vencimiento || '-';
-
-        return `
-            <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
-                <td class="px-8 py-5 font-bold text-slate-900">${utils.escape(tipo)}</td>
-                <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(nexo)}</td>
-                <td class="px-8 py-5 text-sm font-bold text-slate-600">${utils.escape(estado)}</td>
-                <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(vencimiento)}</td>
-            </tr>
-        `;
-    }
-};
-
-// ===============================
-// UI
-// ===============================
-const ui = {
-    toggleGlobalLoader(show, message = 'Procesando...') {
-        state.isLoading = show;
-
-        const loader = document.getElementById('app-loader');
-        const loaderMsg = document.getElementById('app-loader-message');
-
-        if (!loader) return;
-
-        if (loaderMsg) loaderMsg.innerText = message;
-
-        if (show) {
-            loader.classList.remove('hidden');
-            loader.classList.add('flex');
-        } else {
-            loader.classList.add('hidden');
-            loader.classList.remove('flex');
-        }
-
-        document.querySelectorAll('button').forEach(btn => {
-            btn.disabled = show;
-        });
-    },
-
-    notify(message, type = 'info') {
-        let container = document.getElementById('toast-container');
-
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            container.className = 'fixed top-6 right-6 z-[2000] space-y-3';
-            document.body.appendChild(container);
-        }
-
-        const toast = document.createElement('div');
-
-        const colorClass = type === 'error'
-            ? 'border-red-100 text-red-700'
-            : type === 'success'
-                ? 'border-emerald-100 text-emerald-700'
-                : 'border-slate-100 text-slate-700';
-
-        toast.className = `bg-white ${colorClass} border shadow-xl rounded-2xl px-5 py-4 text-sm font-bold max-w-[360px]`;
-        toast.innerText = message;
-
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.remove();
-        }, 4500);
-    },
-
-    ensureDynamicViews() {
-        const main = document.querySelector('main');
-        if (!main) return;
-
-        if (!document.getElementById('view-crew')) {
-            const crew = document.createElement('div');
-            crew.id = 'view-crew';
-            crew.className = 'view-section hidden';
-            crew.innerHTML = `
-                <div class="card-brand p-0 overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50 border-b border-slate-100">
-                            <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                                <th class="px-8 py-5">DNI</th>
-                                <th class="px-8 py-5">Nombres</th>
-                                <th class="px-8 py-5">Cargo</th>
-                                <th class="px-8 py-5">Documentación</th>
-                            </tr>
-                        </thead>
-                        <tbody id="crew-table-body"></tbody>
-                    </table>
-                </div>
-            `;
-            main.appendChild(crew);
-        }
-
-        if (!document.getElementById('view-docs')) {
-            const docs = document.createElement('div');
-            docs.id = 'view-docs';
-            docs.className = 'view-section hidden';
-            docs.innerHTML = `
-                <div class="card-brand p-0 overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50 border-b border-slate-100">
-                            <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                                <th class="px-8 py-5">Documento</th>
-                                <th class="px-8 py-5">Nexo</th>
-                                <th class="px-8 py-5">Estado</th>
-                                <th class="px-8 py-5">Vencimiento</th>
-                            </tr>
-                        </thead>
-                        <tbody id="docs-table-body"></tbody>
-                    </table>
-                </div>
-            `;
-            main.appendChild(docs);
-        }
-    },
-
-    switchTab(tabId) {
-        state.activeTab = tabId;
-
-        const titles = {
-            dashboard: 'Dashboard',
-            fleet: 'Unidades',
-            crew: 'Tripulación',
-            docs: 'Documentos'
+const adapters = {
+    normalizePermission(raw = {}) {
+        return {
+            role: utils.toText(utils.pick(raw, ['rol_app', 'role'])).toUpperCase(),
+            module: utils.toText(utils.pick(raw, ['modulo', 'module'])).toUpperCase(),
+            action: utils.toText(utils.pick(raw, ['accion', 'action'])).toUpperCase(),
+            allowed: utils.toBool(utils.pick(raw, ['permitido', 'allowed'], false))
         };
-
-        const title = document.getElementById('view-title');
-        if (title) title.innerText = titles[tabId] || 'Dashboard';
-
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.remove('bg-[#E20613]', 'text-white', 'shadow-xl', 'shadow-red-200');
-            btn.classList.add('text-slate-500', 'hover:bg-slate-50');
-        });
-
-        const activeBtn = document.getElementById(`nav-${tabId}`);
-
-        if (activeBtn) {
-            activeBtn.classList.add('bg-[#E20613]', 'text-white', 'shadow-xl', 'shadow-red-200');
-            activeBtn.classList.remove('text-slate-500', 'hover:bg-slate-50');
-        }
-
-        document.querySelectorAll('.view-section').forEach(sec => {
-            sec.classList.add('hidden');
-        });
-
-        const activeSec = document.getElementById(`view-${tabId}`);
-        if (activeSec) activeSec.classList.remove('hidden');
-
-        this.renderCurrentTab();
     },
 
-    renderCurrentTab() {
-        if (!state.lastData) return;
+    normalizeUser(raw = {}) {
+        const nombres = utils.toText(utils.pick(raw, ['nombre', 'nombres']));
+        const apellidos = utils.toText(utils.pick(raw, ['apellidos']));
+        const fullName = [nombres, apellidos].filter(Boolean).join(' ').trim();
 
-        const data = state.lastData;
-
-        if (state.activeTab === 'dashboard') {
-            this.renderDashboard(data.stats || {}, data.units || [], data.crew || []);
-        }
-
-        if (state.activeTab === 'fleet') {
-            this.renderFleet(data.units || []);
-        }
-
-        if (state.activeTab === 'crew') {
-            this.renderCrew(data.crew || []);
-        }
-
-        if (state.activeTab === 'docs') {
-            this.renderDocs(data.docs || []);
-        }
+        return {
+            usuarioId: utils.toText(utils.pick(raw, ['usuario_id', 'user_id'])),
+            dni: utils.toText(utils.pick(raw, ['dni'])),
+            empresaRuc: utils.toText(utils.pick(raw, ['empresa_ruc', 'empresa_ruc_fk'])),
+            role: utils.toText(utils.pick(raw, ['rol_app', 'role'])).toUpperCase(),
+            cargo: utils.toText(utils.pick(raw, ['cargo'])),
+            nombres,
+            apellidos,
+            fullName: fullName || utils.toText(utils.pick(raw, ['razon_social', 'empresa'])),
+            companyName: utils.toText(utils.pick(raw, ['razon_social', 'empresa', 'company_name'])),
+            estado: utils.toText(utils.pick(raw, ['estado']), 'ACTIVO').toUpperCase()
+        };
     },
 
-    renderDashboard(stats = {}, units = [], crew = []) {
-        const complianceVal = utils.clampPercent(
-            stats.companyCompliance ??
-            stats.cumplimiento_empresa ??
-            utils.getAveragePercent([
-                stats.unitsCompliance,
-                stats.crewCompliance
-            ])
-        );
-
-        const complianceText = document.getElementById('compliance-val');
-        if (complianceText) complianceText.innerText = `${complianceVal}%`;
-
-        const ring = document.getElementById('compliance-ring');
-        if (ring) {
-            const offset = 263.89 * (1 - complianceVal / 100);
-            ring.style.strokeDashoffset = offset;
-        }
-
-        const fleetList = document.getElementById('fleet-summary-list');
-
-        if (fleetList) {
-            if (!units.length) {
-                fleetList.innerHTML = Components.Empty('No hay unidades registradas.');
-            } else {
-                fleetList.innerHTML = units.slice(0, 3).map(u => {
-                    const placa = u.id || u.placa || u.Placa || '-';
-                    const compliance = utils.clampPercent(u.compliance ?? u.cumplimiento ?? 0);
-
-                    return `
-                        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-300 border border-slate-100">
-                                    <i data-lucide="truck" size="18"></i>
-                                </div>
-                                <p class="font-bold text-slate-900">${utils.escape(placa)}</p>
-                            </div>
-                            <span class="text-xs font-bold text-emerald-500">${compliance}%</span>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        utils.createIcons();
+    normalizeCompany(raw = {}, fallbackUser = null) {
+        return {
+            ruc: utils.toText(utils.pick(raw, ['empresa_ruc', 'ruc']), fallbackUser?.empresaRuc || ''),
+            razonSocial: utils.toText(
+                utils.pick(raw, ['razon_social', 'empresa', 'company_name']),
+                fallbackUser?.companyName || ''
+            ),
+            estado: utils.toText(utils.pick(raw, ['estado']), 'ACTIVO').toUpperCase(),
+            contactoNombre: utils.toText(utils.pick(raw, ['contacto_nombre'])),
+            contactoTelefono: utils.toText(utils.pick(raw, ['contacto_telefono']))
+        };
     },
 
-    renderFleet(units = []) {
-        const tbody = document.getElementById('fleet-table-body');
-        if (!tbody) return;
-
-        tbody.innerHTML = units.length
-            ? units.map(Components.FleetRow).join('')
-            : `<tr><td colspan="4">${Components.Empty('No hay unidades registradas.')}</td></tr>`;
+    normalizeUnit(raw = {}) {
+        return {
+            id: utils.toText(utils.pick(raw, ['placa', 'id'])),
+            placa: utils.toText(utils.pick(raw, ['placa', 'id'])),
+            empresaRuc: utils.toText(utils.pick(raw, ['empresa_ruc', 'empresa_ruc_fk'])),
+            tipoUnidad: utils.toText(utils.pick(raw, ['tipo_unidad', 'tipo'])),
+            marca: utils.toText(utils.pick(raw, ['marca'])),
+            modelo: utils.toText(utils.pick(raw, ['modelo'])),
+            anio: utils.toText(utils.pick(raw, ['anio', 'año'])),
+            capacidad: utils.toText(utils.pick(raw, ['capacidad'])),
+            sistema: utils.toText(utils.pick(raw, ['sistema'])),
+            lineaExclusiva: utils.toText(utils.pick(raw, ['linea_exclusiva'])),
+            telefono: utils.toText(utils.pick(raw, ['telefono'])),
+            estado: utils.toText(utils.pick(raw, ['estado']), 'ACTIVO').toUpperCase(),
+            compliance: utils.toNumber(utils.pick(raw, ['compliance', 'cumplimiento']), NaN),
+            raw
+        };
     },
 
-    renderCrew(crew = []) {
-        const tbody = document.getElementById('crew-table-body');
-        if (!tbody) return;
+    normalizeCrew(raw = {}) {
+        const nombres = utils.toText(utils.pick(raw, ['nombres', 'nombre']));
+        const apellidos = utils.toText(utils.pick(raw, ['apellidos']));
 
-        tbody.innerHTML = crew.length
-            ? crew.map(Components.CrewRow).join('')
-            : `<tr><td colspan="4">${Components.Empty('No hay tripulantes registrados.')}</td></tr>`;
-    },
-
-    renderDocs(docs = []) {
-        const tbody = document.getElementById('docs-table-body');
-        if (!tbody) return;
-
-        tbody.innerHTML = docs.length
-            ? docs.map(Components.DocRow).join('')
-            : `<tr><td colspan="4">${Components.Empty('No hay documentos registrados.')}</td></tr>`;
-    },
-
-    showApp() {
-        const login = document.getElementById('login-modal');
-        const app = document.getElementById('app-container');
-
-        if (login) login.classList.add('hidden');
-        if (app) app.classList.remove('hidden');
-
-        const empresa = document.getElementById('user-empresa');
-        if (empresa) {
-            empresa.innerText =
-                state.user?.razon_social ||
-                state.user?.Razon_Social ||
-                state.user?.empresa ||
-                state.user?.empresa_ruc ||
-                'EMPRESA';
-        }
-    },
-
-    showLogin() {
-        const login = document.getElementById('login-modal');
-        const app = document.getElementById('app-container');
-
-        if (login) login.classList.remove('hidden');
-        if (app) app.classList.add('hidden');
-    }
-};
-
-// ===============================
-// APP CONTROLLERS
-// ===============================
-window.app = {
-    async login(event) {
-        event.preventDefault();
-
-        const dni = document.getElementById('login-dni')?.value.trim();
-        const pass = document.getElementById('login-pass')?.value.trim();
-
-        if (!dni || !pass) {
-            ui.notify('Por favor complete DNI y contraseña.', 'error');
-            return;
-        }
-
-        try {
-            const res = await api.request('login', { dni, pass });
-
-            if (!res.data || !res.data.dni) {
-                throw new Error('El servidor no devolvió una sesión válida.');
-            }
-
-            state.user = res.data;
-            localStorage.setItem(SESSION_KEY, JSON.stringify(res.data));
-
-            ui.showApp();
-
-            await this.refreshData();
-
-            ui.notify('Sesión iniciada correctamente.', 'success');
-
-        } catch (error) {
-            localStorage.removeItem(SESSION_KEY);
-            state.user = null;
-            state.lastData = null;
-            ui.showLogin();
-        }
-    },
-
-    async refreshData() {
-        if (!state.user) {
-            ui.showLogin();
-            return;
-        }
-
-        try {
-            const res = await api.request('getDashboard', {
-                user: state.user
-            });
-
-            state.lastData = res.data || {};
-
-            if (res.data?.user) {
-                state.user = res.data.user;
-                localStorage.setItem(SESSION_KEY, JSON.stringify(res.data.user));
-                ui.showApp();
-            }
-
-            ui.renderCurrentTab();
-
-        } catch (error) {
-            console.error('Fallo la actualización de datos:', error);
-
-            const msg = String(error.message || '');
-
-            if (
-                msg.includes('Sesión inválida') ||
-                msg.includes('Usuario no encontrado') ||
-                msg.includes('Usuario inactivo') ||
-                msg.includes('No tiene permisos') ||
-                msg.includes('no tiene permiso')
-            ) {
-                localStorage.removeItem(SESSION_KEY);
-                state.user = null;
-                state.lastData = null;
-                state.activeTab = 'dashboard';
-                ui.showLogin();
-            }
-        }
-    },
-
-    logout() {
-        const confirmLogout = confirm('¿Está seguro que desea cerrar sesión?');
-
-        if (!confirmLogout) return;
-
-        localStorage.removeItem(SESSION_KEY);
-
-        state.user = null;
-        state.lastData = null;
-        state.activeTab = 'dashboard';
-
-        ui.showLogin();
-        ui.notify('Sesión cerrada correctamente.', 'success');
-    }
-};
-
-// ===============================
-// INICIALIZACIÓN
-// ===============================
-document.addEventListener('DOMContentLoaded', async () => {
-    ui.ensureDynamicViews();
-    utils.createIcons();
-
-    if (state.user) {
-        ui.showApp();
-        await window.app.refreshData();
-    } else {
-        ui.showLogin();
-    }
-});
-
-// ===============================
-// FUNCIONES GLOBALES PARA HTML
-// ===============================
-window.switchTab = id => ui.switchTab(id);
-window.handleLogin = event => window.app.login(event);
-window.logout = () => window.app.logout();
-window.refreshData = () => window.app.refreshData();
+        return {
+            id: utils.toText(utils.pick(raw, ['dni', 'id'])),

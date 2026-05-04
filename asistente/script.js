@@ -714,20 +714,23 @@ async function handleUnitSubmit(e) {
     return;
   }
 
-  const payload = {
-    user: state.user,
-    mode,
-    placa,
-    sistema,
-    tipo_unidad: tipoUnidad,
-    marca: document.getElementById('form-unit-marca')?.value.trim() || '',
-    modelo: document.getElementById('form-unit-modelo')?.value.trim() || '',
-    capacidad: document.getElementById('form-unit-capacidad')?.value.trim() || '',
-    linea_exclusiva: document.getElementById('form-unit-exclusiva')?.checked
-      ? document.getElementById('form-unit-linea')?.value.trim()
-      : '',
-    estado: 'ACTIVO'
-  };
+ const payload = {
+  user: state.user,
+  mode,
+  placa,
+  sistema,
+  tipo_unidad: tipoUnidad,
+  marca: document.getElementById('form-unit-marca')?.value.trim() || '',
+  modelo: document.getElementById('form-unit-modelo')?.value.trim() || '',
+  año: document.getElementById('form-unit-anio')?.value.trim() || '',
+  anio: document.getElementById('form-unit-anio')?.value.trim() || '',
+  capacidad: document.getElementById('form-unit-capacidad')?.value.trim() || '',
+  telefono: document.getElementById('form-unit-telefono')?.value.trim() || '',
+  linea_exclusiva: document.getElementById('form-unit-exclusiva')?.checked
+    ? document.getElementById('form-unit-linea')?.value.trim()
+    : '',
+  estado: 'ACTIVO'
+};;
 
   setLoading(true, mode === 'edit' ? 'Actualizando unidad...' : 'Registrando unidad...');
 

@@ -17,10 +17,12 @@ const state = {
   data: {
     docs: [],
     stats: null,
-    companies: []
+    companies: [],
+    requirements: []
   },
   activeFilter: 'PENDIENTE_VALIDACION',
   selectedDoc: null,
+  selectedRequirement: null,
   refreshing: false
 };
 
@@ -75,9 +77,7 @@ const api = {
         signal: controller.signal
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP_${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP_${response.status}`);
 
       const result = await response.json();
 
@@ -125,20 +125,12 @@ function normalizeUpper(value = '') {
   return String(value || '').trim().toUpperCase();
 }
 
-function clampNumber(value) {
-  const n = Number(value);
-  if (Number.isNaN(n)) return 0;
-  return n;
-}
-
 function formatDate(value) {
   if (!value) return 'N/A';
 
   const date = new Date(value);
 
-  if (isNaN(date.getTime())) {
-    return String(value);
-  }
+  if (isNaN(date.getTime())) return String(value);
 
   return date.toLocaleDateString('es-PE', {
     year: 'numeric',
@@ -227,6 +219,7 @@ function switchTab(tabId) {
   const titles = {
     dashboard: 'Dashboard',
     validation: 'Validación',
+    requirements: 'Requisitos',
     companies: 'Empresas',
     reports: 'Reportes',
     'company-detail': 'Detalle Empresa'
@@ -235,6 +228,7 @@ function switchTab(tabId) {
   const subtitles = {
     dashboard: 'Resumen de cumplimiento de la red.',
     validation: 'Cola de documentos pendientes por revisar.',
+    requirements: 'Administración de la matriz documental.',
     companies: 'Monitor de empresas transportistas.',
     reports: 'Indicadores y trazabilidad documental.',
     'company-detail': 'Detalle de documentos y cumplimiento por empresa.'
@@ -244,12 +238,10 @@ function switchTab(tabId) {
   setText('view-subtitle', subtitles[tabId] || '');
 
   const btnBack = document.getElementById('btn-back');
+
   if (btnBack) {
-    if (tabId === 'company-detail') {
-      btnBack.classList.remove('hidden');
-    } else {
-      btnBack.classList.add('hidden');
-    }
+    if (tabId === 'company-detail') btnBack.classList.remove('hidden');
+    else btnBack.classList.add('hidden');
   }
 
   renderTab();
@@ -258,6 +250,7 @@ function switchTab(tabId) {
 function renderTab() {
   if (state.activeTab === 'dashboard') renderDashboard();
   if (state.activeTab === 'validation') renderValidation();
+  if (state.activeTab === 'requirements') renderRequirements();
   if (state.activeTab === 'companies') renderCompanies();
   if (state.activeTab === 'reports') renderReports();
 }
@@ -312,6 +305,7 @@ function setUserHeader(user) {
   setText('user-role', user?.rol_app || 'VALIDADOR');
 
   const avatar = document.getElementById('user-avatar');
+
   if (avatar) {
     avatar.innerText = displayName
       .split(' ')
@@ -366,7 +360,8 @@ async function refreshData(silent = false) {
     state.data = {
       docs: normalizeDocs(res.docs || []),
       stats: res.stats || null,
-      companies: []
+      companies: [],
+      requirements: normalizeRequirements(res.requirements || [])
     };
 
     if (res.user) {
@@ -425,6 +420,21 @@ function normalizeDocs(docs = []) {
   }));
 }
 
+function normalizeRequirements(rows = []) {
+  return rows.map(r => ({
+    requisito_id: r.requisito_id || '',
+    tipo_nexo: normalizeUpper(r.tipo_nexo || ''),
+    aplica_a_campo: r.aplica_a_campo || '',
+    aplica_a_valor: r.aplica_a_valor || '',
+    tipo_documento: r.tipo_documento || '',
+    descripcion: r.descripcion || '',
+    obligatorio: normalizeUpper(r.obligatorio || 'SI'),
+    requiere_vencimiento: normalizeUpper(r.requiere_vencimiento || 'SI'),
+    dias_alerta: r.dias_alerta || 15,
+    estado: normalizeUpper(r.estado || 'ACTIVO')
+  }));
+}
+
 function buildCompanies(docs = []) {
   const map = {};
 
@@ -455,7 +465,7 @@ function buildCompanies(docs = []) {
 }
 
 /* =========================
-   RENDER DASHBOARD
+   DASHBOARD
 ========================= */
 
 function renderDashboard() {
@@ -464,7 +474,6 @@ function renderDashboard() {
 
   const docs = state.data.docs || [];
   const stats = state.data.stats || buildStatsFromDocs(docs);
-
   const recent = docs.slice(0, 5);
 
   view.innerHTML = `
@@ -554,8 +563,13 @@ function buildStatsFromDocs(docs) {
 }
 
 /* =========================
-   RENDER VALIDATION
+   VALIDATION
 ========================= */
+
+function filterValidation(status) {
+  state.activeFilter = status;
+  renderValidation();
+}
 
 function renderValidation() {
   const view = document.getElementById('view-validation');
@@ -682,6 +696,298 @@ function renderDocRow(doc) {
       </button>
     </div>
   `;
+}
+
+/* =========================
+   REQUIREMENTS
+========================= */
+
+function renderRequirements() {
+  const view = document.getElementById('view-requirements');
+  if (!view) return;
+
+  const requirements = state.data.requirements || [];
+
+  view.innerHTML = `
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-2xl font-black text-slate-900 uppercase tracking-tight">Matriz de requisitos</h3>
+        <p class="text-sm text-slate-400 font-medium">Administra los requisitos visibles para el Portal Asistente.</p>
+      </div>
+
+      <button type="button" onclick="openRequirementModal()" class="px-6 py-4 btn-primary text-[10px]">
+        Nuevo Requisito
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-5">
+      ${
+        requirements.length
+          ? requirements.map(renderRequirementCard).join('')
+          : `<div class="card-brand p-12 text-center text-slate-400 font-black uppercase tracking-widest text-xs">No hay requisitos registrados.</div>`
+      }
+    </div>
+  `;
+
+  refreshIcons();
+}
+
+function renderRequirementCard(req) {
+  const isActive = req.estado === 'ACTIVO';
+
+  return `
+    <div class="card-brand p-7">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div class="flex items-start gap-5">
+          <div class="w-14 h-14 rounded-2xl flex items-center justify-center ${isActive ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-50 text-slate-400'}">
+            <i data-lucide="list-checks" style="width: 24px; height: 24px;"></i>
+          </div>
+
+          <div>
+            <div class="flex flex-wrap items-center gap-3 mb-2">
+              <h3 class="font-black text-slate-900 text-lg uppercase tracking-tight">${escapeHtml(req.tipo_documento)}</h3>
+              <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                isActive
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                  : 'bg-slate-50 text-slate-500 border-slate-100'
+              }">
+                ${escapeHtml(req.estado)}
+              </span>
+            </div>
+
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              ${escapeHtml(req.tipo_nexo)} · ${escapeHtml(req.aplica_a_campo || 'GENERAL')} · ${escapeHtml(req.aplica_a_valor || 'TODOS')}
+            </p>
+
+            <p class="text-sm text-slate-500 mt-3">${escapeHtml(req.descripcion || 'Sin descripción')}</p>
+
+            <p class="text-xs text-slate-400 mt-1">
+              Obligatorio: ${escapeHtml(req.obligatorio)} · Vencimiento: ${escapeHtml(req.requiere_vencimiento)} · Alerta: ${escapeHtml(req.dias_alerta)} días
+            </p>
+          </div>
+        </div>
+
+        <div class="flex gap-3 justify-end">
+          <button type="button" onclick="openRequirementModal('${escapeAttr(req.requisito_id)}')" class="px-5 py-3 rounded-2xl bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100">
+            Editar
+          </button>
+
+          ${
+            isActive
+              ? `<button type="button" onclick="deactivateRequirement('${escapeAttr(req.requisito_id)}')" class="px-5 py-3 rounded-2xl bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest hover:bg-red-100">Desactivar</button>`
+              : `<button type="button" onclick="activateRequirement('${escapeAttr(req.requisito_id)}')" class="px-5 py-3 rounded-2xl bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100">Activar</button>`
+          }
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function openRequirementModal(requisitoId = null) {
+  const req = requisitoId
+    ? state.data.requirements.find(r => String(r.requisito_id) === String(requisitoId))
+    : null;
+
+  state.selectedRequirement = req || null;
+
+  const modal = document.getElementById('modal-container');
+  const content = document.getElementById('modal-content');
+
+  if (!modal || !content) return;
+
+  content.innerHTML = `
+    <button type="button" onclick="closeRequirementModal()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900">
+      <i data-lucide="x" style="width: 24px; height: 24px;"></i>
+    </button>
+
+    <div class="space-y-8">
+      <div class="pr-12">
+        <h3 class="text-2xl font-black text-slate-900 tracking-tight uppercase">
+          ${req ? 'Editar Requisito' : 'Nuevo Requisito'}
+        </h3>
+        <p class="text-slate-500 font-medium mt-1">Define la regla documental que verá el Portal Asistente.</p>
+      </div>
+
+      <form id="requirement-form" onsubmit="handleRequirementSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <input type="hidden" id="req-id" value="${escapeAttr(req?.requisito_id || '')}">
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tipo de nexo</label>
+          <select id="req-tipo-nexo" class="input-brand" required>
+            ${option('EMPRESA', req?.tipo_nexo)}
+            ${option('UNIDAD', req?.tipo_nexo)}
+            ${option('TRIPULACION', req?.tipo_nexo)}
+          </select>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tipo de documento</label>
+          <input id="req-tipo-documento" class="input-brand" value="${escapeAttr(req?.tipo_documento || '')}" placeholder="Ej: SOAT" required>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Aplica a campo</label>
+          <input id="req-aplica-campo" class="input-brand" value="${escapeAttr(req?.aplica_a_campo || '')}" placeholder="Ej: sistema, cargo">
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Aplica a valor</label>
+          <input id="req-aplica-valor" class="input-brand" value="${escapeAttr(req?.aplica_a_valor || '')}" placeholder="Ej: CLIMATIZADA, CONDUCTOR">
+        </div>
+
+        <div class="space-y-2 md:col-span-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Descripción</label>
+          <textarea id="req-descripcion" class="input-brand min-h-[100px]" placeholder="Descripción del requisito">${escapeHtml(req?.descripcion || '')}</textarea>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Obligatorio</label>
+          <select id="req-obligatorio" class="input-brand">
+            ${option('SI', req?.obligatorio)}
+            ${option('NO', req?.obligatorio)}
+          </select>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Requiere vencimiento</label>
+          <select id="req-vencimiento" class="input-brand">
+            ${option('SI', req?.requiere_vencimiento)}
+            ${option('NO', req?.requiere_vencimiento)}
+          </select>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Días de alerta</label>
+          <input id="req-dias-alerta" type="number" min="0" class="input-brand" value="${escapeAttr(req?.dias_alerta || 15)}">
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Estado</label>
+          <select id="req-estado" class="input-brand">
+            ${option('ACTIVO', req?.estado)}
+            ${option('INACTIVO', req?.estado)}
+          </select>
+        </div>
+
+        <div class="md:col-span-2 flex gap-4 pt-4">
+          <button type="button" onclick="closeRequirementModal()" class="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-500 font-black hover:bg-slate-50">
+            Cancelar
+          </button>
+
+          <button type="submit" class="flex-[2] py-4 btn-primary">
+            Guardar Requisito
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  refreshIcons();
+}
+
+function option(value, current) {
+  const selected = normalizeUpper(value) === normalizeUpper(current) ? 'selected' : '';
+  return `<option value="${escapeAttr(value)}" ${selected}>${escapeHtml(value)}</option>`;
+}
+
+function closeRequirementModal() {
+  state.selectedRequirement = null;
+
+  const modal = document.getElementById('modal-container');
+  const content = document.getElementById('modal-content');
+
+  if (content) content.innerHTML = '';
+
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+}
+
+async function handleRequirementSubmit(event) {
+  event.preventDefault();
+
+  const requisitoId = document.getElementById('req-id')?.value.trim();
+
+  const payload = {
+    user: state.user,
+    requisito_id: requisitoId,
+    tipo_nexo: document.getElementById('req-tipo-nexo')?.value.trim(),
+    aplica_a_campo: document.getElementById('req-aplica-campo')?.value.trim(),
+    aplica_a_valor: document.getElementById('req-aplica-valor')?.value.trim(),
+    tipo_documento: document.getElementById('req-tipo-documento')?.value.trim(),
+    descripcion: document.getElementById('req-descripcion')?.value.trim(),
+    obligatorio: document.getElementById('req-obligatorio')?.value.trim(),
+    requiere_vencimiento: document.getElementById('req-vencimiento')?.value.trim(),
+    dias_alerta: document.getElementById('req-dias-alerta')?.value.trim(),
+    estado: document.getElementById('req-estado')?.value.trim()
+  };
+
+  if (!payload.tipo_nexo || !payload.tipo_documento) {
+    alert('Complete tipo de nexo y tipo de documento.');
+    return;
+  }
+
+  showLoader(requisitoId ? 'Actualizando requisito...' : 'Creando requisito...');
+
+  try {
+    const action = requisitoId ? 'updateRequirement' : 'createRequirement';
+    const res = await api.call(action, payload);
+
+    closeRequirementModal();
+    await reloadData();
+
+    alert(res?.message || 'Requisito guardado correctamente.');
+
+  } catch (error) {
+    alert(error.message || 'Error guardando requisito.');
+  } finally {
+    hideLoader();
+  }
+}
+
+async function activateRequirement(requisitoId) {
+  if (!confirm('¿Confirmas activar este requisito?')) return;
+
+  showLoader('Activando requisito...');
+
+  try {
+    const res = await api.call('activateRequirement', {
+      user: state.user,
+      requisito_id: requisitoId
+    });
+
+    await reloadData();
+    alert(res?.message || 'Requisito activado correctamente.');
+
+  } catch (error) {
+    alert(error.message || 'Error activando requisito.');
+  } finally {
+    hideLoader();
+  }
+}
+
+async function deactivateRequirement(requisitoId) {
+  if (!confirm('¿Confirmas desactivar este requisito?')) return;
+
+  showLoader('Desactivando requisito...');
+
+  try {
+    const res = await api.call('deactivateRequirement', {
+      user: state.user,
+      requisito_id: requisitoId
+    });
+
+    await reloadData();
+    alert(res?.message || 'Requisito desactivado correctamente.');
+
+  } catch (error) {
+    alert(error.message || 'Error desactivando requisito.');
+  } finally {
+    hideLoader();
+  }
 }
 
 /* =========================
@@ -1025,6 +1331,7 @@ window.switchTab = switchTab;
 window.handleLogin = handleLogin;
 window.logout = logout;
 window.refreshData = refreshData;
+
 window.filterValidation = filterValidation;
 
 window.openValidationModal = openValidationModal;
@@ -1032,5 +1339,11 @@ window.closeValidationModal = closeValidationModal;
 window.approveSelectedDoc = approveSelectedDoc;
 window.observeSelectedDoc = observeSelectedDoc;
 window.rejectSelectedDoc = rejectSelectedDoc;
+
+window.openRequirementModal = openRequirementModal;
+window.closeRequirementModal = closeRequirementModal;
+window.handleRequirementSubmit = handleRequirementSubmit;
+window.activateRequirement = activateRequirement;
+window.deactivateRequirement = deactivateRequirement;
 
 window.openFile = openFile;

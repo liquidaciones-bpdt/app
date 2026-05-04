@@ -7,7 +7,24 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="styles.css" />
+  <style>
+/* HT-BPDT — estilos actuales preservados */
+body { font-family: 'Inter', sans-serif; }
+.card-brand { background-color:white; border-radius:40px; border:1px solid #f1f5f9; box-shadow:0 25px 50px -12px rgba(241,245,249,.6); padding:2rem; transition:all .3s ease; }
+.input-brand { width:100%; padding:1rem 1.5rem; background-color:white; border:1px solid #e2e8f0; border-radius:1.25rem; outline:none; transition:all .2s; font-weight:500; }
+.input-brand:focus { border-color:#E20613; box-shadow:0 0 0 4px rgba(226,6,19,.1); }
+.btn-primary { background-color:#E20613; color:white; border-radius:1.25rem; font-weight:700; padding:1rem 1.5rem; transition:all .2s; display:inline-flex; align-items:center; justify-content:center; gap:.5rem; box-shadow:0 20px 25px -5px rgba(226,6,19,.2); }
+.btn-primary:hover:not(:disabled){ background-color:#B90510; transform:translateY(-1px); }
+.btn-primary:active:not(:disabled){ transform:scale(.98); }
+.btn-primary:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; }
+.nav-btn { width:100%; display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-radius:1.25rem; font-weight:700; font-size:.875rem; transition:all .2s; }
+.badge { display:inline-flex; align-items:center; padding:.35rem .7rem; border-radius:999px; font-size:.7rem; font-weight:800; }
+.badge-ok{ background:#dcfce7; color:#166534; }
+.badge-warn{ background:#fef3c7; color:#92400e; }
+.badge-error{ background:#fee2e2; color:#991b1b; }
+.badge-info{ background:#e0f2fe; color:#075985; }
+
+  </style>
 </head>
 <body class="bg-[#F8FAFC] text-[#1e293b]">
   <div id="app-loader" class="fixed inset-0 z-[1000] bg-white/90 backdrop-blur-md flex-col items-center justify-center p-6 hidden">

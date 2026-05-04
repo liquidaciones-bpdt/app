@@ -26,6 +26,8 @@ const state = {
   refreshing: false
 };
 
+let dashboardChart = null;
+
 /* =========================
    SESSION
 ========================= */
@@ -86,7 +88,6 @@ const api = {
       }
 
       return result.data;
-
     } catch (error) {
       if (error.name === 'AbortError') {
         throw new Error('La solicitud tardó demasiado. Verifica conexión o despliegue.');
@@ -97,7 +98,6 @@ const api = {
       }
 
       throw error;
-
     } finally {
       clearTimeout(timeout);
     }
@@ -123,6 +123,12 @@ function escapeAttr(value = '') {
 
 function normalizeUpper(value = '') {
   return String(value || '').trim().toUpperCase();
+}
+
+function clampPercent(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return 0;
+  return Math.max(0, Math.min(100, Math.round(n)));
 }
 
 function formatDate(value) {
@@ -287,7 +293,6 @@ async function handleLogin(event) {
     setUserHeader(user);
 
     await reloadData();
-
   } catch (error) {
     localStorage.removeItem(SESSION_KEY);
     state.user = null;
@@ -372,7 +377,6 @@ async function refreshData(silent = false) {
     state.data.companies = buildCompanies(state.data.docs);
 
     renderTab();
-
   } catch (error) {
     console.error('Error refreshData:', error);
     alert(error.message || 'Error cargando información.');
@@ -390,7 +394,6 @@ async function refreshData(silent = false) {
       state.user = null;
       location.reload();
     }
-
   } finally {
     if (btn) btn.classList.remove('pointer-events-none', 'spinning');
     if (!silent) hideLoader();
@@ -472,94 +475,233 @@ function renderDashboard() {
   const view = document.getElementById('view-dashboard');
   if (!view) return;
 
-  const docs = state.data.docs || [];
-  const stats = state.data.stats || buildStatsFromDocs(docs);
-  const recent = docs.slice(0, 5);
+  const stats = buildDashboardStats();
 
   view.innerHTML = `
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
-      ${renderStatCard('Total', stats.total || 0, 'file-text', 'text-slate-500')}
-      ${renderStatCard('Pendientes', stats.pendientes || 0, 'clock', 'text-amber-500')}
-      ${renderStatCard('Observados', stats.observados || 0, 'eye', 'text-orange-500')}
-      ${renderStatCard('Rechazados', stats.rechazados || 0, 'x-circle', 'text-red-500')}
-      ${renderStatCard('Validados', stats.validados || 0, 'check-circle-2', 'text-emerald-500')}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+      ${renderMetricCard('ALCANCE GLOBAL', stats.avgCompanyCompliance, 'Promedio general de empresas', '#3B82F6', stats.totalCompanies, 'Empresas', stats.companiesWithDocs, 'Con docs', stats.avgCompanyCompliance, 'Global')}
+
+      ${renderMetricCard('VALIDACIÓN DOCUMENTAL', stats.validationProgress, 'Avance de documentos auditados', '#E30613', stats.completedDocs, 'Auditados', stats.totalDocs, 'Total docs', stats.validationProgress, 'Procesado', '#00B074')}
+
+      ${renderMetricCard('DOCUMENTOS PENDIENTES', stats.pendingPct, 'Carga pendiente por revisar', '#FFB300', stats.pendientes, 'Pendientes', stats.totalDocs, 'Total docs', stats.pendingPct, 'Pendiente', '#FFB300')}
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div class="card-brand p-8 lg:col-span-2">
-        <div class="flex items-center justify-between mb-8">
-          <div>
-            <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight">Cola de validación</h3>
-            <p class="text-sm text-slate-400 font-medium">Últimos documentos recibidos.</p>
+    <div class="card-brand p-8 bg-white border border-slate-50 flex items-center gap-10">
+      <div class="min-w-[220px]">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Documentación Procesada</p>
+        <h4 class="text-2xl font-black text-slate-900">${stats.validationProgress}%</h4>
+      </div>
+
+      <div class="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden relative">
+        <div class="h-full bg-slate-900 rounded-full transition-all duration-1000" style="width: ${stats.validationProgress}%"></div>
+      </div>
+
+      <div class="flex items-center gap-6 text-slate-400 font-mono text-[10px] font-bold uppercase tracking-widest">
+        <span>Total: ${stats.totalDocs}</span>
+        <span>Auditados: ${stats.completedDocs}</span>
+      </div>
+    </div>
+
+    <div class="card-brand p-12">
+      <div class="flex justify-between items-center mb-10">
+        <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Progreso de Validación</h3>
+
+        <div class="flex gap-6 items-center">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-[#3B82F6]"></div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progreso real</span>
           </div>
 
-          <button type="button" onclick="switchTab('validation')" class="px-5 py-3 rounded-2xl bg-[#E30613] text-white text-[10px] font-black uppercase tracking-widest">
-            Revisar
-          </button>
-        </div>
-
-        <div class="space-y-4">
-          ${
-            recent.length
-              ? recent.map(renderDocRow).join('')
-              : `<div class="p-8 text-center text-slate-400 font-bold">No hay documentos pendientes.</div>`
-          }
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-[#FFB300]"></div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meta 90%</span>
+          </div>
         </div>
       </div>
 
-      <div class="card-brand p-8">
-        <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight mb-6">Resumen</h3>
+      <div class="h-[400px] w-full relative">
+        <canvas id="dashboard-chart"></canvas>
+      </div>
+    </div>
 
-        <div class="space-y-5">
-          ${renderProgressLine('Pendientes', stats.pendientes || 0, stats.total || 0)}
-          ${renderProgressLine('Observados', stats.observados || 0, stats.total || 0)}
-          ${renderProgressLine('Validados', stats.validados || 0, stats.total || 0)}
+    <div class="card-brand p-8">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight">Últimos documentos recibidos</h3>
+          <p class="text-sm text-slate-400 font-medium">Cola reciente de validación documental.</p>
         </div>
+
+        <button type="button" onclick="switchTab('validation')" class="px-5 py-3 rounded-2xl bg-[#E30613] text-white text-[10px] font-black uppercase tracking-widest">
+          Revisar
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        ${
+          stats.recentDocs.length
+            ? stats.recentDocs.map(renderDocRow).join('')
+            : `<div class="p-8 text-center text-slate-400 font-bold">No hay documentos pendientes.</div>`
+        }
       </div>
     </div>
   `;
 
+  initDashboardChart(stats);
   refreshIcons();
 }
 
-function renderStatCard(label, value, icon, colorClass) {
+function buildDashboardStats() {
+  const docs = state.data.docs || [];
+  const companies = state.data.companies || buildCompanies(docs);
+
+  const totalDocs = docs.length;
+  const pendientes = docs.filter(d => d.estado_validacion === ESTADOS.PENDIENTE).length;
+  const observados = docs.filter(d => d.estado_validacion === ESTADOS.OBSERVADO).length;
+  const rechazados = docs.filter(d => d.estado_validacion === ESTADOS.RECHAZADO).length;
+  const validados = docs.filter(d => d.estado_validacion === ESTADOS.VALIDADO).length;
+
+  const completedDocs = validados + rechazados + observados;
+  const validationProgress = totalDocs ? Math.round((completedDocs / totalDocs) * 100) : 0;
+  const pendingPct = totalDocs ? Math.round((pendientes / totalDocs) * 100) : 0;
+
+  const companiesWithDocs = companies.filter(c => c.total > 0).length;
+
+  const avgCompanyCompliance = companies.length
+    ? Math.round(
+        companies.reduce((sum, c) => {
+          const approved = Number(c.validados || 0);
+          const total = Number(c.total || 0);
+          const pct = total ? (approved / total) * 100 : 0;
+          return sum + pct;
+        }, 0) / companies.length
+      )
+    : 0;
+
+  return {
+    totalDocs,
+    pendientes,
+    observados,
+    rechazados,
+    validados,
+    completedDocs,
+    validationProgress,
+    pendingPct,
+    totalCompanies: companies.length,
+    companiesWithDocs,
+    avgCompanyCompliance,
+    recentDocs: docs.slice(0, 5)
+  };
+}
+
+function renderMetricCard(label, value, sub, color, mini1, mini1Label, mini2, mini2Label, ringPct, ringLabel, mini1Color) {
+  const pct = clampPercent(ringPct);
+  const dashoffset = 263.89 * (1 - pct / 100);
+
   return `
-    <div class="card-brand p-6">
-      <div class="flex items-center justify-between mb-6">
-        <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center ${colorClass}">
-          <i data-lucide="${icon}" style="width: 22px; height: 22px;"></i>
+    <div class="card-brand p-8 bg-white flex items-center justify-between gap-6 h-full">
+      <div class="flex-1 space-y-4">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic">${escapeHtml(label)}</p>
+
+        <h2 class="text-5xl font-black tracking-tighter leading-none" style="color: ${color}">
+          ${clampPercent(value)}%
+        </h2>
+
+        <p class="text-[11px] font-bold text-slate-500 italic leading-tight">${escapeHtml(sub)}</p>
+
+        <div class="flex gap-2 mt-4">
+          <div class="flex-1 px-2 py-3 bg-white border border-slate-100 rounded-xl shadow-sm text-center">
+            <p class="text-sm font-black text-slate-900 leading-none mb-1">${escapeHtml(mini1)}</p>
+            <p class="text-[8px] font-black uppercase tracking-widest italic" style="color: ${mini1Color || '#3B82F6'}">
+              ${escapeHtml(mini1Label)}
+            </p>
+          </div>
+
+          <div class="flex-1 px-2 py-3 bg-white border border-slate-100 rounded-xl shadow-sm text-center">
+            <p class="text-sm font-black text-slate-900 leading-none mb-1">${escapeHtml(mini2)}</p>
+            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest italic">
+              ${escapeHtml(mini2Label)}
+            </p>
+          </div>
         </div>
       </div>
-      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${escapeHtml(label)}</p>
-      <h3 class="text-4xl font-black text-slate-900 tracking-tighter mt-1">${value}</h3>
-    </div>
-  `;
-}
 
-function renderProgressLine(label, value, total) {
-  const pct = total ? Math.round((value / total) * 100) : 0;
+      <div class="relative w-32 h-32 flex-shrink-0">
+        <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="transparent" stroke="#F8FAFC" stroke-width="10"></circle>
+          <circle cx="50" cy="50" r="42" fill="transparent" stroke="${color}" stroke-width="10" stroke-dasharray="263.89" stroke-dashoffset="${dashoffset}" stroke-linecap="round"></circle>
+        </svg>
 
-  return `
-    <div>
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-black text-slate-500 uppercase tracking-widest">${escapeHtml(label)}</span>
-        <span class="text-xs font-black text-slate-900">${pct}%</span>
-      </div>
-      <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-        <div class="h-full bg-[#E30613]" style="width:${pct}%"></div>
+        <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <span class="text-xl font-black text-slate-900 tracking-tighter leading-none">${pct}%</span>
+          <span class="text-[7px] font-black text-slate-400 uppercase tracking-[0.15em] mt-0.5 font-mono leading-none">
+            ${escapeHtml(ringLabel)}
+          </span>
+        </div>
       </div>
     </div>
   `;
 }
 
-function buildStatsFromDocs(docs) {
-  return {
-    total: docs.length,
-    pendientes: docs.filter(d => d.estado_validacion === ESTADOS.PENDIENTE).length,
-    observados: docs.filter(d => d.estado_validacion === ESTADOS.OBSERVADO).length,
-    rechazados: docs.filter(d => d.estado_validacion === ESTADOS.RECHAZADO).length,
-    validados: docs.filter(d => d.estado_validacion === ESTADOS.VALIDADO).length
-  };
+function initDashboardChart(stats) {
+  const ctx = document.getElementById('dashboard-chart');
+  if (!ctx || !window.Chart) return;
+
+  if (dashboardChart) dashboardChart.destroy();
+
+  dashboardChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Base', 'Pendiente', 'Auditado', 'Actual'],
+      datasets: [
+        {
+          label: 'Progreso real',
+          data: [
+            0,
+            stats.pendingPct,
+            stats.validationProgress,
+            stats.avgCompanyCompliance
+          ],
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 4,
+          pointRadius: 6,
+          pointBackgroundColor: '#3B82F6',
+          pointBorderWidth: 4,
+          pointBorderColor: '#fff'
+        },
+        {
+          label: 'Meta de cumplimiento',
+          data: [90, 90, 90, 90],
+          borderColor: '#FFB300',
+          borderDash: [5, 5],
+          borderWidth: 2,
+          fill: false,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          min: 0,
+          max: 100,
+          grid: { color: '#f1f5f9' },
+          ticks: { color: '#64748b' }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#64748b' }
+        }
+      }
+    }
+  });
 }
 
 /* =========================
@@ -600,9 +742,7 @@ function renderValidation() {
 
 function getFilteredDocs() {
   const docs = state.data.docs || [];
-
   if (state.activeFilter === 'TODOS') return docs;
-
   return docs.filter(doc => doc.estado_validacion === state.activeFilter);
 }
 
@@ -940,7 +1080,6 @@ async function handleRequirementSubmit(event) {
     await reloadData();
 
     alert(res?.message || 'Requisito guardado correctamente.');
-
   } catch (error) {
     alert(error.message || 'Error guardando requisito.');
   } finally {
@@ -961,7 +1100,6 @@ async function activateRequirement(requisitoId) {
 
     await reloadData();
     alert(res?.message || 'Requisito activado correctamente.');
-
   } catch (error) {
     alert(error.message || 'Error activando requisito.');
   } finally {
@@ -982,7 +1120,6 @@ async function deactivateRequirement(requisitoId) {
 
     await reloadData();
     alert(res?.message || 'Requisito desactivado correctamente.');
-
   } catch (error) {
     alert(error.message || 'Error desactivando requisito.');
   } finally {
@@ -1057,6 +1194,30 @@ function renderReports() {
   `;
 
   refreshIcons();
+}
+
+function renderStatCard(label, value, icon, colorClass) {
+  return `
+    <div class="card-brand p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center ${colorClass}">
+          <i data-lucide="${icon}" style="width: 22px; height: 22px;"></i>
+        </div>
+      </div>
+      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${escapeHtml(label)}</p>
+      <h3 class="text-4xl font-black text-slate-900 tracking-tighter mt-1">${value}</h3>
+    </div>
+  `;
+}
+
+function buildStatsFromDocs(docs = []) {
+  return {
+    total: docs.length,
+    pendientes: docs.filter(d => d.estado_validacion === ESTADOS.PENDIENTE).length,
+    observados: docs.filter(d => d.estado_validacion === ESTADOS.OBSERVADO).length,
+    rechazados: docs.filter(d => d.estado_validacion === ESTADOS.RECHAZADO).length,
+    validados: docs.filter(d => d.estado_validacion === ESTADOS.VALIDADO).length
+  };
 }
 
 /* =========================
@@ -1210,7 +1371,6 @@ async function approveSelectedDoc() {
     await reloadData();
 
     alert(res?.message || 'Documento aprobado correctamente.');
-
   } catch (error) {
     alert(error.message || 'Error aprobando documento.');
   } finally {
@@ -1257,7 +1417,6 @@ async function rejectOrObserveSelectedDoc(status) {
     await reloadData();
 
     alert(res?.message || 'Documento actualizado correctamente.');
-
   } catch (error) {
     alert(error.message || 'Error actualizando documento.');
   } finally {

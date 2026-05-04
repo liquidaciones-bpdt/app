@@ -563,39 +563,41 @@
   </div>
 
   <div id="upload-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6">
-    <div class="w-full max-w-xl bg-white rounded-[40px] shadow-2xl p-10 relative">
-      <button type="button" onclick="closeUpload()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900">
-        <i data-lucide="x" size="24"></i>
-      </button>
+  <div class="w-full max-w-xl bg-white rounded-[40px] shadow-2xl p-10 relative">
+    <button type="button" onclick="closeUpload()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900">
+      <i data-lucide="x" size="24"></i>
+    </button>
 
-      <div class="space-y-8">
-        <div>
-          <h3 class="text-2xl font-black text-slate-900 tracking-tight italic">Subir Documento</h3>
-          <p id="upload-details" class="text-slate-500 font-medium mt-1"></p>
+    <div class="space-y-8">
+      <div>
+        <h3 class="text-2xl font-black text-slate-900 tracking-tight italic">Subir Documento</h3>
+        <p id="upload-details" class="text-slate-500 font-medium mt-1"></p>
+      </div>
+
+      <div class="space-y-6">
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha de Vencimiento</label>
+          <input type="date" id="upload-expiry" class="input-brand">
         </div>
 
-        <div class="space-y-6">
-          <div class="space-y-2">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha de Vencimiento</label>
-            <input type="date" id="upload-expiry" class="input-brand">
+        <input type="file" id="upload-file" class="hidden" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+
+        <div onclick="document.getElementById('upload-file').click()" class="p-10 border-2 border-dashed border-slate-100 rounded-[32px] bg-[#F8FAFC] flex flex-col items-center justify-center text-center cursor-pointer group hover:bg-red-50 hover:border-red-100 transition-all">
+          <div class="p-5 bg-white rounded-3xl text-slate-300 group-hover:text-[#E20613] shadow-sm mb-4">
+            <i data-lucide="upload" size="32"></i>
           </div>
-
-          <div class="p-10 border-2 border-dashed border-slate-100 rounded-[32px] bg-[#F8FAFC] flex flex-col items-center justify-center text-center cursor-pointer group hover:bg-red-50 hover:border-red-100 transition-all">
-            <div class="p-5 bg-white rounded-3xl text-slate-300 group-hover:text-[#E20613] shadow-sm mb-4">
-              <i data-lucide="upload" size="32"></i>
-            </div>
-            <p class="font-bold text-slate-600">Seleccionar o Arrastrar Archivo</p>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">PDF, JPG o PNG • MAX 10MB</p>
-          </div>
+          <p id="upload-file-label" class="font-bold text-slate-600">Seleccionar o Arrastrar Archivo</p>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">PDF, JPG o PNG • MAX 10MB</p>
         </div>
+      </div>
 
-        <div class="flex gap-4">
-          <button type="button" onclick="closeUpload()" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50">Cancelar</button>
-          <button type="button" id="btn-sync-doc" class="flex-[2] btn-primary">Sincronizar Datos</button>
-        </div>
+      <div class="flex gap-4">
+        <button type="button" onclick="closeUpload()" class="flex-1 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50">Cancelar</button>
+        <button type="button" onclick="handleUploadDocument()" id="btn-sync-doc" class="flex-[2] btn-primary">Enviar a Validación</button>
       </div>
     </div>
   </div>
+</div>
 
   <script type="module" src="script.js"></script>
 </body>

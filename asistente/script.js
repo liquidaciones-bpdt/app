@@ -178,7 +178,11 @@ async function handleLogin(event) {
   showLoader('Validando acceso seguro...');
 
   try {
-    const user = await api.call('login', { dni, pass });
+    const user = await api.call('login', {
+      dni,
+      pass,
+      portal: 'ASISTENTE'
+    });
 
     state.user = user;
     localStorage.setItem(SESSION_KEY, JSON.stringify(user));

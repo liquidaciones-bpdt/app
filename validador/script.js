@@ -116,7 +116,11 @@ async function handleLogin(event) {
   }
 
   try {
-    const user = await apiRequest('login', { dni, pass });
+    const user = await apiRequest('login', {
+      dni,
+      pass,
+      portal: 'VALIDADOR'
+    });
 
     saveSession(user);
 

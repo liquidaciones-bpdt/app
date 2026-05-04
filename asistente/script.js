@@ -1,15 +1,33 @@
 import CONFIG from './config.js';
 
+/**
+ * HT-BPDT Asistente - Frontend GitHub Pages + Apps Script Web App
+ * Mantiene UI/UX de referencia
+ */
+
 const SESSION_KEY = 'htbpdt_asistente_session_v3';
 const REQUEST_TIMEOUT_MS = 25000;
 
 const state = {
   user: getStoredSession(),
+  loading: false,
   activeTab: 'dashboard',
-  lastData: null,
-  isLoading: false
+  data: {
+    units: [],
+    crew: [],
+    docs: [],
+    historial: [],
+    requisitos: [],
+    stats: null
+  },
+  filterType: 'all',
+  activeDocId: null,
+  refreshing: false
 };
 
+/**
+ * SESSION
+ */
 function getStoredSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
@@ -29,50 +47,11 @@ function getStoredSession() {
   }
 }
 
-const utils = {
-  escape(value = '') {
-    return String(value)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
-  },
-
-  clampPercent(value) {
-    const n = Number(value);
-    if (Number.isNaN(n)) return 0;
-    return Math.max(0, Math.min(100, Math.round(n)));
-  },
-
-  createIcons() {
-    if (window.lucide) {
-      lucide.createIcons();
-    }
-  },
-
-  fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = () => {
-        const result = String(reader.result || '');
-        const base64 = result.includes(',') ? result.split(',')[1] : result;
-        resolve(base64);
-      };
-
-      reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
-      reader.readAsDataURL(file);
-    });
-  },
-
-  unique(values) {
-    return [...new Set(values.filter(Boolean))];
-  }
-};
-
+/**
+ * API WRAPPER - GitHub Pages + GAS Web App
+ */
 const api = {
-  async request(action, payload = {}) {
+  async call(action, payload = {}) {
     if (!CONFIG.API_URL || CONFIG.API_URL.includes('XXXXXXXX')) {
       throw new Error('Backend no configurado. Revisa config.js.');
     }
@@ -81,14 +60,15 @@ const api = {
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
-      ui.toggleGlobalLoader(true, 'Conectando con el servidor...');
-
       const response = await fetch(CONFIG.API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8'
         },
-        body: JSON.stringify({ action, payload }),
+        body: JSON.stringify({
+          action,
+          payload
+        }),
         signal: controller.signal
       });
 
@@ -99,768 +79,940 @@ const api = {
       const result = await response.json();
 
       if (!result.ok) {
-        throw new Error(result.message || 'El servidor rechazó la solicitud.');
+        throw new Error(result.message || 'Error del servidor.');
       }
 
-      return result;
+      return result.data;
 
     } catch (error) {
-      const message = api.getFriendlyError(error);
-      ui.notify(message, 'error');
-      console.error(`API Error [${action}]:`, error);
+      if (error.name === 'AbortError') {
+        throw new Error('La solicitud tardó demasiado. Verifica conexión o despliegue.');
+      }
+
+      if (String(error.message || '').includes('Failed to fetch')) {
+        throw new Error('No se pudo conectar con Google Apps Script. Revisa URL, permisos o despliegue.');
+      }
+
       throw error;
 
     } finally {
       clearTimeout(timeout);
-      ui.toggleGlobalLoader(false);
     }
-  },
-
-  getFriendlyError(error) {
-    const msg = error?.message || '';
-
-    if (error.name === 'AbortError') {
-      return 'La solicitud tardó demasiado. Verifica si la información se guardó y vuelve a intentar.';
-    }
-
-    if (msg.includes('Failed to fetch')) {
-      return 'No se pudo conectar con Google Apps Script. Revisa internet, permisos, despliegue o URL del Web App.';
-    }
-
-    if (msg === 'HTTP_404') {
-      return 'Error de configuración: la URL del backend no existe o está mal copiada.';
-    }
-
-    if (msg === 'HTTP_500' || msg === 'HTTP_503') {
-      return 'El servidor está ocupado o tuvo un error temporal. Intenta nuevamente.';
-    }
-
-    return msg || 'Ocurrió un error inesperado.';
   }
 };
 
-const Components = {
-  ProgressBar(value) {
-    const percent = utils.clampPercent(value);
+/**
+ * HELPERS
+ */
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
 
-    return `
-      <div class="flex items-center gap-3">
-        <div class="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div class="h-full bg-emerald-500" style="width:${percent}%"></div>
-        </div>
-        <span class="text-xs font-bold">${percent}%</span>
-      </div>
-    `;
-  },
+function clampPercent(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return 0;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
 
-  Empty(message) {
-    return `
-      <div class="p-8 text-center text-slate-400 font-bold text-sm">
-        ${utils.escape(message)}
-      </div>
-    `;
-  },
+function getUnitId(unit) {
+  return unit.id || unit.placa || '-';
+}
 
-  FleetRow(unit) {
-    const placa = unit.placa || unit.id || '-';
-    const sistema = unit.sistema || '-';
-    const estado = unit.estado || '-';
-    const compliance = unit.compliance || unit.cumplimiento || 0;
+function getUnitTipo(unit) {
+  return unit.tipo || unit.tipo_unidad || '-';
+}
 
-    return `
-      <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
-        <td class="px-8 py-5 font-bold text-slate-900">${utils.escape(placa)}</td>
-        <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(sistema)}</td>
-        <td class="px-8 py-5 text-sm font-bold text-emerald-500">${utils.escape(estado)}</td>
-        <td class="px-8 py-5">${Components.ProgressBar(compliance)}</td>
-      </tr>
-    `;
-  },
+function getCrewName(person) {
+  return person.nombre || `${person.nombres || ''} ${person.apellidos || ''}`.trim() || '-';
+}
 
-  CrewRow(person) {
-    const dni = person.dni || '-';
-    const nombre = person.nombre || `${person.nombres || ''} ${person.apellidos || ''}`.trim() || '-';
-    const cargo = person.cargo || '-';
-    const compliance = person.compliance || person.cumplimiento || 0;
+function getCrewRole(person) {
+  return person.rol || person.cargo || '-';
+}
 
-    return `
-      <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
-        <td class="px-8 py-5 font-bold text-slate-900">${utils.escape(dni)}</td>
-        <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(nombre)}</td>
-        <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(cargo)}</td>
-        <td class="px-8 py-5">${Components.ProgressBar(compliance)}</td>
-      </tr>
-    `;
-  },
+function refreshIcons() {
+  if (window.lucide) lucide.createIcons();
+}
 
-  DocRow(doc) {
-    const tipo = doc.tipo_documento || doc.documento || '-';
-    const nexo = doc.nexo_id || doc.nexo || '-';
-    const estado = doc.estado || doc.estado_vigencia || '-';
-    const vencimiento = doc.fecha_vencimiento || doc.vencimiento || '-';
-    const version = doc.version_actual || '-';
-    const url = doc.archivo_url_actual || doc.ruta_drive || '';
+/**
+ * NAVIGATION
+ */
+function switchTab(tabId) {
+  state.activeTab = tabId;
 
-    return `
-      <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
-        <td class="px-8 py-5 font-bold text-slate-900">${utils.escape(tipo)}</td>
-        <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(nexo)}</td>
-        <td class="px-8 py-5 text-sm font-bold text-slate-600">${utils.escape(estado)}</td>
-        <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(vencimiento)}</td>
-        <td class="px-8 py-5 text-sm text-slate-500">v${utils.escape(version)}</td>
-        <td class="px-8 py-5 text-sm">
-          ${url ? `<a href="${utils.escape(url)}" target="_blank" class="font-bold text-[#E20613]">Ver PDF</a>` : '-'}
-        </td>
-      </tr>
-    `;
-  },
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.remove('bg-[#E20613]', 'text-white', 'shadow-xl', 'shadow-red-200');
+    btn.classList.add('text-slate-500', 'hover:bg-slate-50');
+  });
 
-  HistorialRow(item) {
-    const tipo = item.tipo_documento || '-';
-    const nexo = item.nexo_id || '-';
-    const version = item.version || '-';
-    const estado = item.estado_validacion || '-';
-    const fecha = item.fecha_carga || '-';
-    const url = item.archivo_url || '';
-
-    return `
-      <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
-        <td class="px-8 py-5 font-bold text-slate-900">${utils.escape(tipo)}</td>
-        <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(nexo)}</td>
-        <td class="px-8 py-5 text-sm text-slate-500">v${utils.escape(version)}</td>
-        <td class="px-8 py-5 text-sm font-bold text-slate-600">${utils.escape(estado)}</td>
-        <td class="px-8 py-5 text-sm text-slate-500">${utils.escape(fecha)}</td>
-        <td class="px-8 py-5 text-sm">
-          ${url ? `<a href="${utils.escape(url)}" target="_blank" class="font-bold text-[#E20613]">Ver archivo</a>` : '-'}
-        </td>
-      </tr>
-    `;
+  const activeBtn = document.getElementById(`nav-${tabId}`);
+  if (activeBtn) {
+    activeBtn.classList.add('bg-[#E20613]', 'text-white', 'shadow-xl', 'shadow-red-200');
+    activeBtn.classList.remove('text-slate-500', 'hover:bg-slate-50');
   }
-};
 
-const ui = {
-  toggleGlobalLoader(show, message = 'Procesando...') {
-    state.isLoading = show;
+  document.querySelectorAll('.view-section').forEach(sec => {
+    sec.classList.remove('active');
+    sec.classList.add('hidden');
+  });
 
-    const loader = document.getElementById('app-loader');
-    const loaderMsg = document.getElementById('app-loader-message');
+  const section = document.getElementById(`view-${tabId}`);
+  if (section) {
+    section.classList.add('active');
+    section.classList.remove('hidden');
+  }
 
-    if (!loader) return;
+  const labels = {
+    dashboard: 'Dashboard',
+    fleet: 'Unidades',
+    crew: 'Tripulación',
+    docs: 'Documentos',
+    company: 'Empresa'
+  };
 
-    if (loaderMsg) loaderMsg.innerText = message;
+  const title = document.getElementById('view-title');
+  if (title) title.innerText = labels[tabId] || 'Dashboard';
 
-    if (show) {
-      loader.classList.remove('hidden');
-      loader.classList.add('flex');
-    } else {
-      loader.classList.add('hidden');
-      loader.classList.remove('flex');
-    }
+  renderTab();
+}
 
-    document.querySelectorAll('button').forEach(btn => {
-      btn.disabled = show;
-    });
-  },
+/**
+ * AUTHENTICATION
+ */
+async function handleLogin(event) {
+  if (event) event.preventDefault();
 
-  notify(message, type = 'info') {
-    let container = document.getElementById('toast-container');
+  const dni = document.getElementById('login-dni')?.value.trim();
+  const pass = document.getElementById('login-pass')?.value.trim();
 
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'toast-container';
-      container.className = 'fixed top-6 right-6 z-[2000] space-y-3';
-      document.body.appendChild(container);
-    }
+  if (!dni || !pass) {
+    alert('Ingresar credenciales.');
+    return;
+  }
 
-    const toast = document.createElement('div');
+  showLoader('Validando acceso seguro...');
 
-    const colorClass = type === 'error'
-      ? 'border-red-100 text-red-700'
-      : type === 'success'
-        ? 'border-emerald-100 text-emerald-700'
-        : 'border-slate-100 text-slate-700';
-
-    toast.className = `bg-white ${colorClass} border shadow-xl rounded-2xl px-5 py-4 text-sm font-bold max-w-[360px]`;
-    toast.innerText = message;
-
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.remove();
-    }, 4500);
-  },
-
-  ensureDynamicViews() {
-    const main = document.querySelector('main');
-    if (!main) return;
-
-    if (!document.getElementById('view-crew')) {
-      const crew = document.createElement('div');
-      crew.id = 'view-crew';
-      crew.className = 'view-section hidden';
-      crew.innerHTML = `
-        <div class="card-brand p-0 overflow-hidden">
-          <table class="w-full text-left">
-            <thead class="bg-slate-50 border-b border-slate-100">
-              <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                <th class="px-8 py-5">DNI</th>
-                <th class="px-8 py-5">Nombres</th>
-                <th class="px-8 py-5">Cargo</th>
-                <th class="px-8 py-5">Documentación</th>
-              </tr>
-            </thead>
-            <tbody id="crew-table-body"></tbody>
-          </table>
-        </div>
-      `;
-      main.appendChild(crew);
-    }
-
-    if (!document.getElementById('view-docs')) {
-      const docs = document.createElement('div');
-      docs.id = 'view-docs';
-      docs.className = 'view-section hidden';
-      docs.innerHTML = `
-        <div class="flex justify-between items-center mb-8">
-          <div>
-            <h3 class="font-black text-xl text-slate-900">DOCUMENTOS APROBADOS</h3>
-            <p class="text-slate-400 text-sm font-bold">Solo se muestra la última versión aprobada.</p>
-          </div>
-          <button type="button" onclick="openUploadModal()" class="btn-primary">
-            <i data-lucide="upload" size="18"></i> Subir Documento
-          </button>
-        </div>
-
-        <div class="card-brand p-0 overflow-hidden mb-10">
-          <table class="w-full text-left">
-            <thead class="bg-slate-50 border-b border-slate-100">
-              <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                <th class="px-8 py-5">Documento</th>
-                <th class="px-8 py-5">Nexo</th>
-                <th class="px-8 py-5">Vigencia</th>
-                <th class="px-8 py-5">Vencimiento</th>
-                <th class="px-8 py-5">Versión</th>
-                <th class="px-8 py-5">Archivo</th>
-              </tr>
-            </thead>
-            <tbody id="docs-table-body"></tbody>
-          </table>
-        </div>
-
-        <div class="card-brand p-0 overflow-hidden">
-          <div class="px-8 py-6 border-b border-slate-100">
-            <h3 class="font-black text-xl text-slate-900">HISTORIAL DE CARGAS</h3>
-            <p class="text-slate-400 text-sm font-bold">Incluye pendientes, aprobados, observados y rechazados.</p>
-          </div>
-          <table class="w-full text-left">
-            <thead class="bg-slate-50 border-b border-slate-100">
-              <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                <th class="px-8 py-5">Documento</th>
-                <th class="px-8 py-5">Nexo</th>
-                <th class="px-8 py-5">Versión</th>
-                <th class="px-8 py-5">Validación</th>
-                <th class="px-8 py-5">Fecha carga</th>
-                <th class="px-8 py-5">Archivo</th>
-              </tr>
-            </thead>
-            <tbody id="historial-table-body"></tbody>
-          </table>
-        </div>
-      `;
-      main.appendChild(docs);
-    }
-
-    this.ensureUploadModal();
-  },
-
-  ensureUploadModal() {
-    if (document.getElementById('upload-modal')) return;
-
-    const modal = document.createElement('div');
-    modal.id = 'upload-modal';
-    modal.className = 'fixed inset-0 z-[1500] bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-6';
-    modal.innerHTML = `
-      <div class="bg-white w-full max-w-[620px] rounded-[40px] shadow-2xl p-8">
-        <div class="flex justify-between items-start mb-8">
-          <div>
-            <h3 class="text-2xl font-black text-slate-900 tracking-tight">Subir Documento</h3>
-            <p class="text-slate-400 text-sm font-bold mt-1">Se registrará en Historial como pendiente de validación.</p>
-          </div>
-          <button type="button" onclick="closeUploadModal()" class="p-3 rounded-full bg-slate-50 text-slate-400 hover:text-[#E20613]">
-            <i data-lucide="x" size="20"></i>
-          </button>
-        </div>
-
-        <form id="upload-form" class="space-y-5">
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Tipo de nexo</label>
-            <select id="upload-tipo-nexo" class="input-brand" required>
-              <option value="">Seleccione...</option>
-              <option value="UNIDAD">Unidad</option>
-              <option value="TRIPULACION">Tripulación</option>
-              <option value="EMPRESA">Empresa</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Unidad / Tripulante</label>
-            <select id="upload-nexo-id" class="input-brand" required>
-              <option value="">Seleccione...</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Tipo de documento</label>
-            <select id="upload-tipo-documento" class="input-brand" required>
-              <option value="">Seleccione...</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Fecha de vencimiento</label>
-            <input id="upload-fecha-vencimiento" type="date" class="input-brand">
-          </div>
-
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Archivo PDF / Imagen</label>
-            <input id="upload-file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="input-brand" required>
-          </div>
-
-          <button type="submit" class="w-full btn-primary py-5">
-            <i data-lucide="upload-cloud" size="18"></i> CARGAR A HISTORIAL
-          </button>
-        </form>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    document.getElementById('upload-tipo-nexo')?.addEventListener('change', () => {
-      this.populateNexoOptions();
-      this.populateDocumentoOptions();
+  try {
+    const user = await api.call('login', {
+      dni,
+      pass
     });
 
-    document.getElementById('upload-form')?.addEventListener('submit', event => {
-      window.app.uploadDocument(event);
+    state.user = user;
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+
+    document.getElementById('login-modal')?.classList.add('hidden');
+    document.getElementById('app-container')?.classList.remove('hidden');
+    document.body.classList.remove('overflow-hidden');
+
+    setUserHeader(user);
+
+    await reloadData();
+
+  } catch (error) {
+    localStorage.removeItem(SESSION_KEY);
+    state.user = null;
+    alert(error.message || 'Error conectando al sistema.');
+  } finally {
+    hideLoader();
+  }
+}
+
+function setUserHeader(user) {
+  const empresaNombre = user?.razon_social || user?.empresa || 'EMPRESA';
+
+  const empresaEl = document.getElementById('user-empresa');
+  if (empresaEl) empresaEl.innerText = empresaNombre;
+
+  const avatarEl = document.getElementById('user-avatar');
+  if (avatarEl) {
+    avatarEl.innerText = empresaNombre
+      .split(' ')
+      .filter(Boolean)
+      .map(w => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || 'HT';
+  }
+}
+
+function logout() {
+  showLoader('Cerrando sesión de forma segura...');
+
+  const logoutBtn = document.querySelector('button[onclick="logout()"]');
+
+  if (logoutBtn) {
+    logoutBtn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" size="20"></i> Cerrando...';
+    refreshIcons();
+  }
+
+  setTimeout(() => {
+    localStorage.removeItem(SESSION_KEY);
+    state.user = null;
+    location.reload();
+  }, 900);
+}
+
+/**
+ * DATA
+ */
+async function reloadData() {
+  await refreshData(true);
+}
+
+async function refreshData(silent = false) {
+  const btn = document.getElementById('refresh-btn');
+
+  if (state.refreshing) return;
+
+  if (!state.user) {
+    document.getElementById('login-modal')?.classList.remove('hidden');
+    document.getElementById('app-container')?.classList.add('hidden');
+    return;
+  }
+
+  state.refreshing = true;
+
+  try {
+    if (!silent) {
+      showLoader('Actualizando datos...');
+    }
+
+    if (btn) btn.classList.add('pointer-events-none', 'spinning');
+
+    const res = await api.call('getDashboard', {
+      user: state.user
     });
 
-    utils.createIcons();
-  },
-
-  populateNexoOptions() {
-    const tipo = document.getElementById('upload-tipo-nexo')?.value;
-    const select = document.getElementById('upload-nexo-id');
-    const data = state.lastData || {};
-
-    if (!select) return;
-
-    select.innerHTML = '<option value="">Seleccione...</option>';
-
-    if (tipo === 'UNIDAD') {
-      (data.units || []).forEach(unit => {
-        const option = document.createElement('option');
-        option.value = unit.placa;
-        option.textContent = `${unit.placa} — ${unit.tipo_unidad || unit.sistema || ''}`;
-        select.appendChild(option);
-      });
-    }
-
-    if (tipo === 'TRIPULACION') {
-      (data.crew || []).forEach(person => {
-        const option = document.createElement('option');
-        option.value = person.dni;
-        option.textContent = `${person.dni} — ${person.nombre || person.nombres || ''}`;
-        select.appendChild(option);
-      });
-    }
-
-    if (tipo === 'EMPRESA') {
-      const option = document.createElement('option');
-      option.value = state.user?.empresa_ruc || '';
-      option.textContent = state.user?.razon_social || state.user?.empresa || 'Empresa';
-      select.appendChild(option);
-      select.value = option.value;
-    }
-  },
-
-  populateDocumentoOptions() {
-    const tipo = document.getElementById('upload-tipo-nexo')?.value;
-    const select = document.getElementById('upload-tipo-documento');
-    const requisitos = state.lastData?.requisitos || [];
-
-    if (!select) return;
-
-    select.innerHTML = '<option value="">Seleccione...</option>';
-
-    const tipos = utils.unique(
-      requisitos
-        .filter(req => String(req.tipo_nexo || '').toUpperCase() === tipo)
-        .map(req => req.tipo_documento)
-    );
-
-    tipos.forEach(tipoDoc => {
-      const option = document.createElement('option');
-      option.value = tipoDoc;
-      option.textContent = tipoDoc;
-      select.appendChild(option);
-    });
-
-    const otro = document.createElement('option');
-    otro.value = 'OTROS';
-    otro.textContent = 'OTROS';
-    select.appendChild(otro);
-  },
-
-  switchTab(tabId) {
-    state.activeTab = tabId;
-
-    const titles = {
-      dashboard: 'Dashboard',
-      fleet: 'Unidades',
-      crew: 'Tripulación',
-      docs: 'Documentos'
+    state.data = {
+      units: normalizeUnits(res.units || []),
+      crew: normalizeCrew(res.crew || []),
+      docs: normalizeDocs(res.docs || []),
+      historial: res.historial || [],
+      requisitos: res.requisitos || [],
+      stats: res.stats || null
     };
 
-    const title = document.getElementById('view-title');
-    if (title) title.innerText = titles[tabId] || 'Dashboard';
-
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.classList.remove('bg-[#E20613]', 'text-white', 'shadow-xl', 'shadow-red-200');
-      btn.classList.add('text-slate-500', 'hover:bg-slate-50');
-    });
-
-    const activeBtn = document.getElementById(`nav-${tabId}`);
-
-    if (activeBtn) {
-      activeBtn.classList.add('bg-[#E20613]', 'text-white', 'shadow-xl', 'shadow-red-200');
-      activeBtn.classList.remove('text-slate-500', 'hover:bg-slate-50');
+    if (res.user) {
+      state.user = res.user;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(res.user));
+      setUserHeader(res.user);
     }
 
-    document.querySelectorAll('.view-section').forEach(sec => {
-      sec.classList.add('hidden');
-    });
+    renderTab();
 
-    const activeSec = document.getElementById(`view-${tabId}`);
-    if (activeSec) activeSec.classList.remove('hidden');
+  } catch (error) {
+    console.error('Error refreshing data:', error);
+    alert(error.message || 'Error actualizando datos.');
 
-    this.renderCurrentTab();
-    utils.createIcons();
-  },
+    const msg = String(error.message || '');
 
-  renderCurrentTab() {
-    if (!state.lastData) return;
-
-    const data = state.lastData;
-
-    if (state.activeTab === 'dashboard') {
-      this.renderDashboard(data.stats || {}, data.units || [], data.crew || []);
-    }
-
-    if (state.activeTab === 'fleet') {
-      this.renderFleet(data.units || []);
-    }
-
-    if (state.activeTab === 'crew') {
-      this.renderCrew(data.crew || []);
-    }
-
-    if (state.activeTab === 'docs') {
-      this.renderDocs(data.docs || [], data.historial || []);
-    }
-  },
-
-  renderDashboard(stats = {}, units = [], crew = []) {
-    const complianceVal = utils.clampPercent(stats.companyCompliance || 0);
-
-    const complianceText = document.getElementById('compliance-val');
-    if (complianceText) complianceText.innerText = `${complianceVal}%`;
-
-    const ring = document.getElementById('compliance-ring');
-
-    if (ring) {
-      const offset = 263.89 * (1 - complianceVal / 100);
-      ring.style.strokeDashoffset = offset;
-    }
-
-    const fleetList = document.getElementById('fleet-summary-list');
-
-    if (fleetList) {
-      if (!units.length) {
-        fleetList.innerHTML = Components.Empty('No hay unidades registradas.');
-      } else {
-        fleetList.innerHTML = units.slice(0, 3).map(u => {
-          const placa = u.placa || '-';
-          const compliance = utils.clampPercent(u.compliance || u.cumplimiento || 0);
-
-          return `
-            <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-              <div class="flex items-center gap-4">
-                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-300 border border-slate-100">
-                  <i data-lucide="truck" size="18"></i>
-                </div>
-                <p class="font-bold text-slate-900">${utils.escape(placa)}</p>
-              </div>
-              <span class="text-xs font-bold text-emerald-500">${compliance}%</span>
-            </div>
-          `;
-        }).join('');
-      }
-    }
-
-    utils.createIcons();
-  },
-
-  renderFleet(units = []) {
-    const tbody = document.getElementById('fleet-table-body');
-    if (!tbody) return;
-
-    tbody.innerHTML = units.length
-      ? units.map(Components.FleetRow).join('')
-      : `<tr><td colspan="4">${Components.Empty('No hay unidades registradas.')}</td></tr>`;
-  },
-
-  renderCrew(crew = []) {
-    const tbody = document.getElementById('crew-table-body');
-    if (!tbody) return;
-
-    tbody.innerHTML = crew.length
-      ? crew.map(Components.CrewRow).join('')
-      : `<tr><td colspan="4">${Components.Empty('No hay tripulantes registrados.')}</td></tr>`;
-  },
-
-  renderDocs(docs = [], historial = []) {
-    const tbodyDocs = document.getElementById('docs-table-body');
-    const tbodyHistorial = document.getElementById('historial-table-body');
-
-    if (tbodyDocs) {
-      tbodyDocs.innerHTML = docs.length
-        ? docs.map(Components.DocRow).join('')
-        : `<tr><td colspan="6">${Components.Empty('No hay documentos aprobados.')}</td></tr>`;
-    }
-
-    if (tbodyHistorial) {
-      tbodyHistorial.innerHTML = historial.length
-        ? historial.map(Components.HistorialRow).join('')
-        : `<tr><td colspan="6">${Components.Empty('No hay cargas en historial.')}</td></tr>`;
-    }
-  },
-
-  showApp() {
-    const login = document.getElementById('login-modal');
-    const app = document.getElementById('app-container');
-
-    if (login) login.classList.add('hidden');
-    if (app) app.classList.remove('hidden');
-
-    const empresa = document.getElementById('user-empresa');
-
-    if (empresa) {
-      empresa.innerText =
-        state.user?.razon_social ||
-        state.user?.empresa ||
-        'EMPRESA';
-    }
-  },
-
-  showLogin() {
-    const login = document.getElementById('login-modal');
-    const app = document.getElementById('app-container');
-
-    if (login) login.classList.remove('hidden');
-    if (app) app.classList.add('hidden');
-  },
-
-  openUploadModal() {
-    this.ensureUploadModal();
-    this.populateNexoOptions();
-    this.populateDocumentoOptions();
-
-    const modal = document.getElementById('upload-modal');
-
-    if (modal) {
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    utils.createIcons();
-  },
-
-  closeUploadModal() {
-    const modal = document.getElementById('upload-modal');
-    const form = document.getElementById('upload-form');
-
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-
-    if (form) form.reset();
-  }
-};
-
-window.app = {
-  async login(event) {
-    event.preventDefault();
-
-    const dni = document.getElementById('login-dni')?.value.trim();
-    const pass = document.getElementById('login-pass')?.value.trim();
-
-    if (!dni || !pass) {
-      ui.notify('Por favor complete DNI y contraseña.', 'error');
-      return;
-    }
-
-    try {
-      const res = await api.request('login', { dni, pass });
-
-      if (!res.data || !res.data.dni) {
-        throw new Error('El servidor no devolvió una sesión válida.');
-      }
-
-      state.user = res.data;
-      localStorage.setItem(SESSION_KEY, JSON.stringify(res.data));
-
-      ui.showApp();
-
-      await this.refreshData();
-
-      ui.notify('Sesión iniciada correctamente.', 'success');
-
-    } catch (error) {
+    if (
+      msg.includes('Sesión inválida') ||
+      msg.includes('Usuario no encontrado') ||
+      msg.includes('Usuario inactivo') ||
+      msg.includes('No tiene permisos') ||
+      msg.includes('no tiene permiso')
+    ) {
       localStorage.removeItem(SESSION_KEY);
       state.user = null;
-      state.lastData = null;
-      ui.showLogin();
-    }
-  },
-
-  async refreshData() {
-    if (!state.user) {
-      ui.showLogin();
-      return;
+      location.reload();
     }
 
-    try {
-      const res = await api.request('getDashboard', {
-        user: state.user
-      });
-
-      state.lastData = res.data || {};
-
-      if (res.data?.user) {
-        state.user = res.data.user;
-        localStorage.setItem(SESSION_KEY, JSON.stringify(res.data.user));
-        ui.showApp();
-      }
-
-      ui.renderCurrentTab();
-
-    } catch (error) {
-      console.error('Falló la actualización de datos:', error);
-
-      const msg = String(error.message || '');
-
-      if (
-        msg.includes('Sesión inválida') ||
-        msg.includes('Usuario no encontrado') ||
-        msg.includes('Usuario inactivo') ||
-        msg.includes('No tiene permisos') ||
-        msg.includes('no tiene permiso')
-      ) {
-        localStorage.removeItem(SESSION_KEY);
-        state.user = null;
-        state.lastData = null;
-        state.activeTab = 'dashboard';
-        ui.showLogin();
-      }
-    }
-  },
-
-  async uploadDocument(event) {
-    event.preventDefault();
-
-    if (!state.user) {
-      ui.notify('Debe iniciar sesión.', 'error');
-      return;
-    }
-
-    const tipoNexo = document.getElementById('upload-tipo-nexo')?.value;
-    const nexoId = document.getElementById('upload-nexo-id')?.value;
-    const tipoDocumento = document.getElementById('upload-tipo-documento')?.value;
-    const fechaVencimiento = document.getElementById('upload-fecha-vencimiento')?.value;
-    const file = document.getElementById('upload-file')?.files?.[0];
-
-    if (!tipoNexo || !nexoId || !tipoDocumento || !file) {
-      ui.notify('Complete todos los campos obligatorios.', 'error');
-      return;
-    }
-
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-
-    if (!allowedTypes.includes(file.type)) {
-      ui.notify('Formato no permitido. Use PDF, JPG, JPEG o PNG.', 'error');
-      return;
-    }
-
-    try {
-      const base64 = await utils.fileToBase64(file);
-
-      const res = await api.request('uploadDocument', {
-        user: state.user,
-        tipo_nexo: tipoNexo,
-        nexo_id: nexoId,
-        tipo_documento: tipoDocumento,
-        fecha_vencimiento: fechaVencimiento,
-        file_name: file.name,
-        mime_type: file.type,
-        file_base64: base64
-      });
-
-      ui.closeUploadModal();
-
-      await this.refreshData();
-
-      ui.notify(
-        res.data?.message || 'Documento cargado correctamente.',
-        'success'
-      );
-
-    } catch (error) {
-      console.error('Error al subir documento:', error);
-    }
-  },
-
-  logout() {
-    const confirmLogout = confirm('¿Está seguro que desea cerrar sesión?');
-
-    if (!confirmLogout) return;
-
-    localStorage.removeItem(SESSION_KEY);
-
-    state.user = null;
-    state.lastData = null;
-    state.activeTab = 'dashboard';
-
-    ui.showLogin();
-    ui.notify('Sesión cerrada correctamente.', 'success');
+  } finally {
+    if (btn) btn.classList.remove('pointer-events-none', 'spinning');
+    if (!silent) hideLoader();
+    state.refreshing = false;
   }
-};
+}
 
-document.addEventListener('DOMContentLoaded', async () => {
-  ui.ensureDynamicViews();
-  utils.createIcons();
+function normalizeUnits(units = []) {
+  return units.map(u => ({
+    ...u,
+    id: u.id || u.placa,
+    tipo: u.tipo || u.tipo_unidad || '',
+    sistema: u.sistema || '',
+    estado: u.estado || 'ACTIVO',
+    compliance: clampPercent(u.compliance || u.cumplimiento || 0),
+    exclusiva: u.exclusiva || u.linea_exclusiva || '',
+    linea: u.linea || u.linea_exclusiva || ''
+  }));
+}
 
-  if (state.user) {
-    ui.showApp();
-    await window.app.refreshData();
+function normalizeCrew(crew = []) {
+  return crew.map(c => ({
+    ...c,
+    id: c.id || c.dni,
+    nombre: getCrewName(c),
+    rol: c.rol || c.cargo || '',
+    compliance: clampPercent(c.compliance || c.cumplimiento || 0),
+    estado: c.estado || 'ACTIVO'
+  }));
+}
+
+function normalizeDocs(docs = []) {
+  return docs.map(d => ({
+    ...d,
+    id: d.id || d.documento_id,
+    entityId: d.entityId || d.nexo_id || d.nexo,
+    entityType: String(d.entityType || d.tipo_nexo || '').toLowerCase(),
+    type: d.type || d.tipo_documento || d.documento,
+    status: d.status || d.estado || d.estado_validacion || d.estado_vigencia || '-',
+    expiryDate: d.expiryDate || d.fecha_vencimiento || d.vencimiento || '',
+    fileUrl: d.fileUrl || d.archivo_url_actual || d.ruta_drive || ''
+  }));
+}
+
+function renderTab() {
+  if (state.activeTab === 'dashboard') renderDashboard();
+  if (state.activeTab === 'fleet') renderFleet();
+  if (state.activeTab === 'crew') renderCrew();
+  if (state.activeTab === 'docs') renderDocs();
+}
+
+/**
+ * DASHBOARD
+ */
+function renderDashboard() {
+  const { stats, units, crew } = state.data;
+  if (!stats) return;
+
+  const globalVal = clampPercent(stats.companyCompliance || 0);
+
+  const ring = document.getElementById('compliance-ring');
+  const valText = document.getElementById('compliance-val');
+  const offset = 263.89 * (1 - globalVal / 100);
+
+  if (valText) valText.innerText = `${globalVal}%`;
+  if (ring) setTimeout(() => ring.style.strokeDashoffset = offset, 100);
+
+  renderStatBlock('stat-flota', 'Flota', stats.unitsCompliance || 0, '#10B981', 'Requisitos de unidad al día', '');
+  renderStatBlock('stat-trip', 'Tripulación', stats.crewCompliance || 0, '#F59E0B', 'Licencias y capacitaciones', '');
+  renderStatBlock('stat-empresa', 'Empresa', stats.companyCompliance || 0, '#3B82F6', 'Carga tributaria y legal', '');
+
+  const alertEl = document.getElementById('expired-alert');
+
+  if (alertEl) {
+    if ((stats.expiredTodayCount || 0) > 0) {
+      alertEl.classList.remove('hidden');
+      alertEl.classList.add('flex');
+
+      const text = document.getElementById('expired-text');
+      if (text) {
+        text.innerHTML = `Hay <strong>${stats.expiredTodayCount} documentos vencidos</strong> que requieren atención para evitar paralizaciones.`;
+      }
+    } else {
+      alertEl.classList.add('hidden');
+      alertEl.classList.remove('flex');
+    }
+  }
+
+  const fleetContainer = document.getElementById('fleet-summary-list');
+
+  if (fleetContainer) {
+    fleetContainer.innerHTML = units.length
+      ? units.slice(0, 3).map(u => `
+          <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-300 border border-slate-100">
+                <i data-lucide="truck" size="20"></i>
+              </div>
+              <div>
+                <p class="font-black text-slate-900">${escapeHtml(getUnitId(u))}</p>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${escapeHtml(u.sistema || '-')}</p>
+              </div>
+            </div>
+            <p class="text-sm font-black text-emerald-500">${clampPercent(u.compliance)}%</p>
+          </div>
+        `).join('')
+      : `<div class="p-8 text-center text-slate-400 font-bold">No hay unidades registradas.</div>`;
+  }
+
+  const crewContainer = document.getElementById('crew-summary-list');
+
+  if (crewContainer) {
+    crewContainer.innerHTML = crew.length
+      ? crew.slice(0, 3).map(c => `
+          <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-300 border border-slate-100">
+                <i data-lucide="user" size="20"></i>
+              </div>
+              <div>
+                <p class="font-black text-slate-900">${escapeHtml(getCrewName(c))}</p>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${escapeHtml(getCrewRole(c))}</p>
+              </div>
+            </div>
+            <span class="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase">REVISAR</span>
+          </div>
+        `).join('')
+      : `<div class="p-8 text-center text-slate-400 font-bold">No hay tripulantes registrados.</div>`;
+  }
+
+  refreshIcons();
+}
+
+function renderStatBlock(id, label, val, color, sub, trend = '') {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="space-y-1">
+      <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">${escapeHtml(label)}</p>
+      <div class="flex items-baseline gap-2">
+        <h3 class="text-[42px] font-black leading-none tracking-tighter" style="color: ${color}">${clampPercent(val)}%</h3>
+        ${trend ? `<span class="text-xs font-bold text-emerald-400">${escapeHtml(trend)}</span>` : ''}
+      </div>
+    </div>
+    <p class="text-[11px] font-medium text-slate-500 mt-4">${escapeHtml(sub)}</p>
+  `;
+}
+
+/**
+ * FLEET
+ */
+function renderFleet() {
+  const tbody = document.getElementById('fleet-table-body');
+  if (!tbody) return;
+
+  const units = state.data.units || [];
+
+  let html = units.map(u => `
+    <tr class="hover:bg-slate-50/50 transition-all">
+      <td class="px-8 py-6 font-black text-slate-900">${escapeHtml(getUnitId(u))}</td>
+
+      <td class="px-8 py-6">
+        <div class="space-y-1">
+          <p class="text-xs font-bold text-slate-600">${escapeHtml(u.sistema || '-')}</p>
+          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${escapeHtml(getUnitTipo(u))}</p>
+        </div>
+      </td>
+
+      <td class="px-8 py-6">
+        <div class="flex items-center gap-2 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
+          <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+          ${escapeHtml(u.estado || 'ACTIVO')}
+        </div>
+      </td>
+
+      <td class="px-8 py-6">
+        <div class="flex items-center gap-4">
+          <div class="flex-1 w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full bg-emerald-500" style="width: ${clampPercent(u.compliance)}%"></div>
+          </div>
+          <span class="text-sm font-black text-slate-900">${clampPercent(u.compliance)}%</span>
+        </div>
+      </td>
+
+      <td class="px-8 py-6 text-right">
+        <button onclick="toggleDropdown(event, '${escapeHtml(getUnitId(u))}')" class="btn-action-trigger">
+          <i data-lucide="more-vertical" size="18"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+
+  html += `
+    <tr class="hover:bg-slate-50/50 transition-all group">
+      <td class="px-8 py-6">
+        <button onclick="openUnitModal()" class="btn-primary whitespace-nowrap shadow-sm hover:translate-y-[-2px]">
+          <i data-lucide="plus" size="18"></i>
+          Registrar Unidad
+        </button>
+      </td>
+      <td class="px-8 py-6"></td>
+      <td class="px-8 py-6"></td>
+      <td class="px-8 py-6"></td>
+      <td class="px-8 py-6"></td>
+    </tr>
+  `;
+
+  tbody.innerHTML = html;
+  refreshIcons();
+}
+
+/**
+ * CREW
+ */
+function renderCrew() {
+  const grid = document.getElementById('crew-grid');
+  if (!grid) return;
+
+  const crew = state.data.crew || [];
+
+  grid.innerHTML = crew.length
+    ? crew.map(c => `
+        <div class="p-8 bg-white rounded-[40px] border border-slate-100 shadow-xl shadow-slate-100/50 group hover:border-red-100 transition-all">
+          <div class="flex items-start justify-between mb-8">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-[#E20613] group-hover:border-red-100 transition-all">
+                <i data-lucide="user" size="24"></i>
+              </div>
+              <div>
+                <h4 class="font-black text-slate-900 leading-tight uppercase">${escapeHtml(getCrewName(c))}</h4>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">${escapeHtml(getCrewRole(c))}</p>
+              </div>
+            </div>
+            <button class="text-slate-200"><i data-lucide="more-vertical" size="18"></i></button>
+          </div>
+
+          <div class="space-y-4">
+            <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <span>Cumplimiento</span>
+              <span class="text-slate-900">${clampPercent(c.compliance)}%</span>
+            </div>
+            <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full bg-[#E20613]" style="width: ${clampPercent(c.compliance)}%"></div>
+            </div>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+              <span class="text-[9px] font-black text-slate-400 tracking-widest uppercase">${escapeHtml(c.estado || 'ACTIVO')}</span>
+            </div>
+            <button class="text-[11px] font-bold text-[#E20613] hover:underline">Ver Perfil</button>
+          </div>
+        </div>
+      `).join('')
+    : `<div class="col-span-3 p-8 text-center text-slate-400 font-bold">No hay tripulantes registrados.</div>`;
+
+  refreshIcons();
+}
+
+/**
+ * DOCS
+ */
+function filterDocs(type) {
+  state.filterType = type;
+
+  document.querySelectorAll('.doc-filter-btn').forEach(btn => {
+    btn.classList.add('bg-white', 'text-slate-500', 'border-slate-100');
+    btn.classList.remove('bg-slate-900', 'text-white', 'shadow-xl');
+  });
+
+  if (event?.target) {
+    event.target.classList.remove('bg-white', 'text-slate-500', 'border-slate-100');
+    event.target.classList.add('bg-slate-900', 'text-white', 'shadow-xl');
+  }
+
+  renderDocs();
+}
+
+function renderDocs() {
+  const grid = document.getElementById('docs-grid');
+  if (!grid) return;
+
+  const docs = state.filterType === 'all'
+    ? state.data.docs
+    : state.data.docs.filter(d => d.entityType === state.filterType);
+
+  grid.innerHTML = docs.length
+    ? docs.map(d => `
+        <div class="card-brand flex flex-col group hover:border-red-100">
+          <div class="flex justify-between items-start mb-6">
+            <div class="p-4 bg-slate-50 rounded-2xl text-slate-300 group-hover:text-[#E20613] transition-all">
+              <i data-lucide="file-text" size="24"></i>
+            </div>
+            <span class="px-3 py-1 rounded-full border border-orange-100 bg-orange-50 text-orange-600 text-[9px] font-black uppercase tracking-widest">${escapeHtml(d.status)}</span>
+          </div>
+
+          <div class="flex-1 space-y-1.5">
+            <h4 class="text-xl font-black text-slate-900 tracking-tight leading-tight">${escapeHtml(d.type)}</h4>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${escapeHtml(d.entityId)}</p>
+          </div>
+
+          <div class="mt-10 space-y-4">
+            <div class="flex items-center gap-3 text-slate-400">
+              <i data-lucide="clock" size="14"></i>
+              <p class="text-xs font-medium">Vence: <span class="font-bold text-slate-700">${escapeHtml(d.expiryDate || 'N/A')}</span></p>
+            </div>
+
+            <div class="flex gap-2">
+              <button onclick="${d.fileUrl ? `window.open('${escapeHtml(d.fileUrl)}', '_blank')` : ''}" class="flex-1 py-3 border border-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">
+                BAJAR
+              </button>
+              <button onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}')" class="flex-1 py-3 bg-[#E20613] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510] shadow-lg shadow-red-100">
+                SUBIR
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('')
+    : `<div class="col-span-3 p-8 text-center text-slate-400 font-bold">No hay documentos registrados.</div>`;
+
+  refreshIcons();
+}
+
+/**
+ * UNIT MODAL
+ */
+function openUnitModal(id = null) {
+  const modal = document.getElementById('unit-modal');
+  const form = document.getElementById('unit-form');
+  const title = document.getElementById('unit-modal-title');
+  const modeInput = document.getElementById('unit-form-mode');
+
+  if (!modal || !form) {
+    alert('No existe el modal de unidad en el HTML.');
+    return;
+  }
+
+  form.reset();
+  toggleLineaExclusiva(false);
+
+  const placaInput = document.getElementById('form-unit-id');
+
+  if (id) {
+    const unit = state.data.units.find(u => getUnitId(u) === id);
+
+    if (!unit) {
+      alert('Unidad no encontrada.');
+      return;
+    }
+
+    if (title) title.innerText = 'Actualizar Unidad';
+    if (modeInput) modeInput.value = 'edit';
+
+    placaInput.value = getUnitId(unit);
+    placaInput.readOnly = true;
+
+    document.getElementById('form-unit-sistema').value = unit.sistema || '';
+    document.getElementById('form-unit-tipo').value = getUnitTipo(unit);
+    document.getElementById('form-unit-marca').value = unit.marca || '';
+    document.getElementById('form-unit-modelo').value = unit.modelo || '';
+    document.getElementById('form-unit-capacidad').value = unit.capacidad || '';
+
+    const isExclusiva = Boolean(unit.linea || unit.exclusiva === true || unit.exclusiva === 'true');
+    document.getElementById('form-unit-exclusiva').checked = isExclusiva;
+    toggleLineaExclusiva(isExclusiva);
+    document.getElementById('form-unit-linea').value = unit.linea || '';
+
   } else {
-    ui.showLogin();
+    if (title) title.innerText = 'Registrar Unidad';
+    if (modeInput) modeInput.value = 'create';
+
+    placaInput.readOnly = false;
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  refreshIcons();
+}
+
+function closeUnitModal() {
+  document.getElementById('unit-modal')?.classList.add('hidden');
+  document.getElementById('unit-modal')?.classList.remove('flex');
+}
+
+function toggleLineaExclusiva(checked) {
+  const wrapper = document.getElementById('wrapper-linea-exclusiva');
+
+  if (!wrapper) return;
+
+  if (checked) {
+    wrapper.classList.remove('hidden');
+  } else {
+    wrapper.classList.add('hidden');
+
+    const linea = document.getElementById('form-unit-linea');
+    if (linea) linea.value = '';
+  }
+}
+
+async function handleUnitSubmit(e) {
+  e.preventDefault();
+
+  const mode = document.getElementById('unit-form-mode')?.value || 'create';
+  const placa = document.getElementById('form-unit-id')?.value.trim().toUpperCase();
+  const sistema = document.getElementById('form-unit-sistema')?.value.trim();
+  const tipoUnidad = document.getElementById('form-unit-tipo')?.value.trim();
+
+  if (!placa || !sistema || !tipoUnidad) {
+    alert('Complete placa, sistema y tipo de unidad.');
+    return;
+  }
+
+  const payload = {
+    user: state.user,
+    mode,
+    placa,
+    sistema,
+    tipo_unidad: tipoUnidad,
+    marca: document.getElementById('form-unit-marca')?.value.trim() || '',
+    modelo: document.getElementById('form-unit-modelo')?.value.trim() || '',
+    capacidad: document.getElementById('form-unit-capacidad')?.value.trim() || '',
+    linea_exclusiva: document.getElementById('form-unit-exclusiva')?.checked
+      ? document.getElementById('form-unit-linea')?.value.trim()
+      : '',
+    estado: 'ACTIVO'
+  };
+
+  setLoading(true, mode === 'edit' ? 'Actualizando unidad...' : 'Registrando unidad...');
+
+  try {
+    const action = mode === 'edit' ? 'updateUnit' : 'createUnit';
+    const res = await api.call(action, payload);
+
+    closeUnitModal();
+    await reloadData();
+
+    alert(res?.message || 'Unidad guardada correctamente.');
+
+  } catch (error) {
+    alert(error.message || 'Error guardando unidad.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+/**
+ * UPLOAD MODAL
+ */
+function openUpload(id, type) {
+  const details = document.getElementById('upload-details');
+
+  if (details) {
+    details.innerHTML = `Sincronizando <strong>${escapeHtml(type)}</strong> para <strong>${escapeHtml(id)}</strong>`;
+  }
+
+  document.getElementById('upload-modal')?.classList.remove('hidden');
+  document.getElementById('upload-modal')?.classList.add('flex');
+}
+
+function closeUpload() {
+  document.getElementById('upload-modal')?.classList.add('hidden');
+  document.getElementById('upload-modal')?.classList.remove('flex');
+}
+
+/**
+ * DROPDOWN
+ */
+function toggleDropdown(event, id) {
+  event.stopPropagation();
+
+  const dropdown = document.getElementById('global-dropdown');
+  if (!dropdown) return;
+
+  const isOpen = dropdown.style.display === 'block';
+
+  if (isOpen && state.activeDocId === id) {
+    closeDropdown();
+    return;
+  }
+
+  state.activeDocId = id;
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  dropdown.style.top = `${rect.bottom + window.scrollY}px`;
+  dropdown.style.left = `${rect.right - 160 + window.scrollX}px`;
+  dropdown.style.display = 'block';
+
+  refreshIcons();
+}
+
+function closeDropdown() {
+  const dropdown = document.getElementById('global-dropdown');
+
+  if (dropdown) {
+    dropdown.style.display = 'none';
+  }
+
+  state.activeDocId = null;
+}
+
+function handleMenuAction(action) {
+  const unitId = state.activeDocId;
+  const unit = state.data.units.find(u => getUnitId(u) === unitId);
+
+  closeDropdown();
+
+  if (!unit) return;
+
+  if (action === 'details') {
+    viewUnitDetails(getUnitId(unit));
+  } else if (action === 'edit') {
+    openUnitModal(getUnitId(unit));
+  } else if (action === 'report') {
+    alert(`Generando reporte consolidado para ${getUnitId(unit)}...`);
+  }
+}
+
+/**
+ * UNIT DETAILS
+ */
+function viewUnitDetails(id) {
+  const unit = state.data.units.find(u => getUnitId(u) === id);
+  const docs = state.data.docs.filter(d => d.entityId === id);
+
+  if (!unit) return;
+
+  const title = document.getElementById('details-modal-title');
+  const subtitle = document.getElementById('details-modal-subtitle');
+
+  if (title) title.innerText = `Documentación: ${getUnitId(unit)}`;
+  if (subtitle) subtitle.innerText = `${unit.sistema || '-'} • ${getUnitTipo(unit)}`;
+
+  const list = document.getElementById('details-docs-list');
+
+  if (list) {
+    if (!docs.length) {
+      list.innerHTML = `
+        <div class="text-center py-12 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-100">
+          <i data-lucide="file-warning" class="mx-auto text-slate-300 mb-4" size="48"></i>
+          <p class="font-bold text-slate-500">No hay documentos registrados para esta unidad.</p>
+        </div>
+      `;
+    } else {
+      list.innerHTML = docs.map(d => {
+        const isExpired = d.status === 'VENCIDO' || d.status === 'OBSERVADO';
+        const statusColor = d.status === 'APROBADO' ? 'text-emerald-500' : (isExpired ? 'text-red-500' : 'text-amber-500');
+        const statusBg = d.status === 'APROBADO' ? 'bg-emerald-50' : (isExpired ? 'bg-red-50' : 'bg-amber-50');
+
+        return `
+          <div class="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-[32px] hover:shadow-lg transition-all group">
+            <div class="flex items-center gap-6">
+              <div class="w-14 h-14 ${statusBg} rounded-2xl flex items-center justify-center ${statusColor}">
+                <i data-lucide="file-text" size="24"></i>
+              </div>
+              <div>
+                <p class="font-black text-slate-900 leading-none">${escapeHtml(d.type)}</p>
+                <div class="flex items-center gap-2 mt-2">
+                  <span class="px-2 py-0.5 ${statusBg} ${statusColor} rounded text-[8px] font-black uppercase tracking-widest">${escapeHtml(d.status)}</span>
+                  <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">VENCE: ${escapeHtml(d.expiryDate || 'N/A')}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+              <button onclick="${d.fileUrl ? `window.open('${escapeHtml(d.fileUrl)}', '_blank')` : ''}" class="p-3 bg-slate-50 text-slate-400 rounded-xl hover:text-[#E20613] hover:bg-red-50 transition-all">
+                <i data-lucide="download" size="18"></i>
+              </button>
+              <button onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}')" class="p-3 bg-[#E20613] text-white rounded-xl hover:bg-[#B90510] transition-all">
+                <i data-lucide="refresh-cw" size="18"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  document.getElementById('details-modal')?.classList.remove('hidden');
+  document.getElementById('details-modal')?.classList.add('flex');
+
+  refreshIcons();
+}
+
+function closeDetailsModal() {
+  document.getElementById('details-modal')?.classList.add('hidden');
+  document.getElementById('details-modal')?.classList.remove('flex');
+}
+
+/**
+ * LOADER
+ */
+function showLoader(message = 'Procesando...') {
+  const loader = document.getElementById('app-loader');
+  const msgEl = document.getElementById('app-loader-message');
+
+  if (loader && msgEl) {
+    msgEl.innerText = message;
+    loader.classList.remove('hidden');
+    loader.classList.add('flex');
+
+    setTimeout(() => {
+      loader.classList.add('opacity-100');
+      loader.classList.remove('opacity-0');
+    }, 10);
+  }
+}
+
+function hideLoader() {
+  const loader = document.getElementById('app-loader');
+
+  if (loader) {
+    loader.classList.add('opacity-0');
+    loader.classList.remove('opacity-100');
+
+    setTimeout(() => {
+      loader.classList.add('hidden');
+      loader.classList.remove('flex');
+    }, 300);
+  }
+}
+
+function setLoading(val, message) {
+  if (val) showLoader(message);
+  else hideLoader();
+}
+
+/**
+ * LISTENERS
+ */
+window.addEventListener('click', e => {
+  if (!e.target.closest('#global-dropdown')) {
+    closeDropdown();
   }
 });
 
-window.switchTab = id => ui.switchTab(id);
-window.handleLogin = event => window.app.login(event);
-window.logout = () => window.app.logout();
-window.refreshData = () => window.app.refreshData();
-window.openUploadModal = () => ui.openUploadModal();
-window.closeUploadModal = () => ui.closeUploadModal();
+window.addEventListener('scroll', () => {
+  const header = document.getElementById('main-header');
+  if (!header) return;
+
+  if (window.scrollY > 20) {
+    header.classList.add('shadow-md', 'border-slate-100', 'bg-white');
+    header.classList.remove('border-transparent', 'bg-white/80');
+  } else {
+    header.classList.remove('shadow-md', 'border-slate-100', 'bg-white');
+    header.classList.add('border-transparent', 'bg-white/80');
+  }
+});
+
+/**
+ * INIT
+ */
+document.addEventListener('DOMContentLoaded', async () => {
+  refreshIcons();
+
+  const unitForm = document.getElementById('unit-form');
+  if (unitForm) {
+    unitForm.addEventListener('submit', handleUnitSubmit);
+  }
+
+  if (state.user) {
+    document.getElementById('login-modal')?.classList.add('hidden');
+    document.getElementById('app-container')?.classList.remove('hidden');
+    setUserHeader(state.user);
+
+    try {
+      await reloadData();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+});
+
+/**
+ * GLOBALS FOR HTML
+ */
+window.switchTab = switchTab;
+window.handleLogin = handleLogin;
+window.logout = logout;
+window.refreshData = refreshData;
+window.filterDocs = filterDocs;
+window.openUpload = openUpload;
+window.closeUpload = closeUpload;
+window.openUnitModal = openUnitModal;
+window.closeUnitModal = closeUnitModal;
+window.toggleLineaExclusiva = toggleLineaExclusiva;
+window.handleUnitSubmit = handleUnitSubmit;
+window.toggleDropdown = toggleDropdown;
+window.handleMenuAction = handleMenuAction;
+window.closeDetailsModal = closeDetailsModal;

@@ -2,7 +2,7 @@ import CONFIG from './config.js';
 
 /**
  * HT-BPDT — Portal Asistente
- * script.js definitivo para GitHub Pages + Google Apps Script
+ * script.js corregido para GitHub Pages + Google Apps Script
  */
 
 // ===============================
@@ -34,7 +34,7 @@ const state = {
 // ===============================
 const utils = {
     escape(value = '') {
-        return String(value)
+        return String(value ?? '')
             .replaceAll('&', '&amp;')
             .replaceAll('<', '&lt;')
             .replaceAll('>', '&gt;')
@@ -163,9 +163,9 @@ const Components = {
 
     FleetRow(unit) {
         const placa = unit.id || unit.placa || unit.Placa || '-';
-        const sistema = unit.sistema || unit.tipo || unit.Sistema || '-';
+        const sistema = unit.sistema || unit.tipo_unidad || unit.tipo || unit.Sistema || '-';
         const estado = unit.estado || unit.Estado || '-';
-        const compliance = unit.compliance || unit.cumplimiento || 0;
+        const compliance = unit.compliance ?? unit.cumplimiento ?? 0;
 
         return `
             <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
@@ -179,9 +179,14 @@ const Components = {
 
     CrewRow(person) {
         const dni = person.dni || person.DNI || '-';
-        const nombre = person.nombre || person.nombres || person.Nombres || '-';
+        const nombre =
+            person.nombre ||
+            `${person.nombres || ''} ${person.apellidos || ''}`.trim() ||
+            person.Nombres ||
+            '-';
+
         const cargo = person.cargo || person.Cargo || '-';
-        const compliance = person.compliance || person.cumplimiento || 0;
+        const compliance = person.compliance ?? person.cumplimiento ?? 0;
 
         return `
             <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
@@ -196,7 +201,13 @@ const Components = {
     DocRow(doc) {
         const tipo = doc.tipo_documento || doc.tipo || doc.documento || '-';
         const nexo = doc.nexo_id || doc.nexo || doc.placa || doc.dni || '-';
-        const estado = doc.estado || doc.Estado || '-';
+        const estado =
+            doc.estado_validacion ||
+            doc.estado_vigencia ||
+            doc.estado ||
+            doc.Estado ||
+            '-';
+
         const vencimiento = doc.fecha_vencimiento || doc.vencimiento || '-';
 
         return `
@@ -372,11 +383,14 @@ const ui = {
     },
 
     renderDashboard(stats = {}, units = [], crew = []) {
-        const complianceVal = utils.getAveragePercent([
-            stats.unitsCompliance,
-            stats.crewCompliance,
-            stats.companyCompliance
-        ]);
+        const complianceVal = utils.clampPercent(
+            stats.companyCompliance ??
+            stats.cumplimiento_empresa ??
+            utils.getAveragePercent([
+                stats.unitsCompliance,
+                stats.crewCompliance
+            ])
+        );
 
         const complianceText = document.getElementById('compliance-val');
         if (complianceText) complianceText.innerText = `${complianceVal}%`;
@@ -395,7 +409,7 @@ const ui = {
             } else {
                 fleetList.innerHTML = units.slice(0, 3).map(u => {
                     const placa = u.id || u.placa || u.Placa || '-';
-                    const compliance = utils.clampPercent(u.compliance || u.cumplimiento || 0);
+                    const compliance = utils.clampPercent(u.compliance ?? u.cumplimiento ?? 0);
 
                     return `
                         <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
@@ -452,9 +466,10 @@ const ui = {
         const empresa = document.getElementById('user-empresa');
         if (empresa) {
             empresa.innerText =
-                state.user?.empresa ||
                 state.user?.razon_social ||
                 state.user?.Razon_Social ||
+                state.user?.empresa ||
+                state.user?.empresa_ruc ||
                 'EMPRESA';
         }
     },
@@ -525,7 +540,7 @@ window.app = {
                 localStorage.setItem(SESSION_KEY, JSON.stringify(res.data.user));
                 ui.showApp();
             }
-            
+
             ui.renderCurrentTab();
 
         } catch (error) {

@@ -426,15 +426,33 @@ function normalizeDocs(docs = []) {
 function normalizeRequirements(rows = []) {
   return rows.map(r => ({
     requisito_id: r.requisito_id || '',
+
     tipo_nexo: normalizeUpper(r.tipo_nexo || ''),
+
     aplica_a_campo: r.aplica_a_campo || '',
     aplica_a_valor: r.aplica_a_valor || '',
+
     nombre_documento: r.nombre_documento || '',
+
+    grupo_documental: r.grupo_documental || 'GENERAL',
+
     descripcion: r.descripcion || '',
+
     obligatorio: normalizeUpper(r.obligatorio || 'SI'),
+
     requiere_vencimiento: normalizeUpper(r.requiere_vencimiento || 'SI'),
-    dias_alerta: r.dias_alerta || 15,
-    estado: normalizeUpper(r.estado || 'ACTIVO')
+
+    dias_alerta: Number(r.dias_alerta || 15),
+
+    orden: Number(r.orden || 0),
+
+    estado: normalizeUpper(r.estado || 'ACTIVO'),
+
+    creado_en: r.creado_en || '',
+    actualizado_en: r.actualizado_en || '',
+
+    creado_por: r.creado_por || '',
+    actualizado_por: r.actualizado_por || ''
   }));
 }
 

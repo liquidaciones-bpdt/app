@@ -406,7 +406,7 @@ function normalizeDocs(docs = []) {
     ...d,
     historial_id: d.historial_id || `${d.documento_id}|${d.version}`,
     fecha_carga: d.fecha_carga || '',
-    tipo_documento: d.tipo_documento || d.type || '',
+    nombre_documento: d.nombre_documento || d.type || '',
     version: Number(d.version || 1),
     nexo_id: d.nexo_id || d.entityId || '',
     tipo_nexo: normalizeUpper(d.tipo_nexo || d.entityType || ''),
@@ -429,7 +429,7 @@ function normalizeRequirements(rows = []) {
     tipo_nexo: normalizeUpper(r.tipo_nexo || ''),
     aplica_a_campo: r.aplica_a_campo || '',
     aplica_a_valor: r.aplica_a_valor || '',
-    tipo_documento: r.tipo_documento || '',
+    nombre_documento: r.nombre_documento || '',
     descripcion: r.descripcion || '',
     obligatorio: normalizeUpper(r.obligatorio || 'SI'),
     requiere_vencimiento: normalizeUpper(r.requiere_vencimiento || 'SI'),
@@ -885,7 +885,7 @@ function renderRequirementCard(req) {
 
           <div>
             <div class="flex flex-wrap items-center gap-3 mb-2">
-              <h3 class="font-black text-slate-900 text-lg uppercase tracking-tight">${escapeHtml(req.tipo_documento)}</h3>
+              <h3 class="font-black text-slate-900 text-lg uppercase tracking-tight">${escapeHtml(req.nombre_documento)}</h3>
               <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
                 isActive
                   ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
@@ -962,7 +962,7 @@ function openRequirementModal(requisitoId = null) {
 
         <div class="space-y-2">
           <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tipo de documento</label>
-          <input id="req-tipo-documento" class="input-brand" value="${escapeAttr(req?.tipo_documento || '')}" placeholder="Ej: SOAT" required>
+          <input id="req-tipo-documento" class="input-brand" value="${escapeAttr(req?.nombre_documento || '')}" placeholder="Ej: SOAT" required>
         </div>
 
         <div class="space-y-2">
@@ -1057,7 +1057,7 @@ async function handleRequirementSubmit(event) {
     tipo_nexo: document.getElementById('req-tipo-nexo')?.value.trim(),
     aplica_a_campo: document.getElementById('req-aplica-campo')?.value.trim(),
     aplica_a_valor: document.getElementById('req-aplica-valor')?.value.trim(),
-    tipo_documento: document.getElementById('req-tipo-documento')?.value.trim(),
+    nombre_documento: document.getElementById('req-tipo-documento')?.value.trim(),
     descripcion: document.getElementById('req-descripcion')?.value.trim(),
     obligatorio: document.getElementById('req-obligatorio')?.value.trim(),
     requiere_vencimiento: document.getElementById('req-vencimiento')?.value.trim(),
@@ -1065,7 +1065,7 @@ async function handleRequirementSubmit(event) {
     estado: document.getElementById('req-estado')?.value.trim()
   };
 
-  if (!payload.tipo_nexo || !payload.tipo_documento) {
+  if (!payload.tipo_nexo || !payload.nombre_documento) {
     alert('Complete tipo de nexo y tipo de documento.');
     return;
   }

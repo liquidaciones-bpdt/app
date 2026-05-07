@@ -774,7 +774,7 @@ function renderValidationCard(doc) {
 
           <div>
             <div class="flex flex-wrap items-center gap-3 mb-2">
-              <h3 class="font-black text-slate-900 text-lg uppercase tracking-tight">${escapeHtml(doc.tipo_documento)}</h3>
+              <h3 class="font-black text-slate-900 text-lg uppercase tracking-tight">${escapeHtml(doc.nombre_documento)}</h3>
               <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${style.badge}">
                 ${escapeHtml(style.label)}
               </span>
@@ -824,7 +824,7 @@ function renderDocRow(doc) {
           <i data-lucide="file-text" style="width: 20px; height: 20px;"></i>
         </div>
         <div>
-          <p class="font-black text-slate-900 uppercase">${escapeHtml(doc.tipo_documento)}</p>
+          <p class="font-black text-slate-900 uppercase">${escapeHtml(doc.nombre_documento)}</p>
           <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest">
             ${escapeHtml(doc.tipo_nexo)} · ${escapeHtml(doc.nexo_id)} · V${escapeHtml(doc.version)}
           </p>
@@ -1258,7 +1258,7 @@ function openValidationModal(historialId) {
           </span>
         </div>
 
-        <h3 class="text-2xl font-black text-slate-900 tracking-tight uppercase">${escapeHtml(doc.tipo_documento)}</h3>
+        <h3 class="text-2xl font-black text-slate-900 tracking-tight uppercase">${escapeHtml(doc.nombre_documento)}</h3>
         <p class="text-slate-500 font-medium mt-1">
           ${escapeHtml(doc.tipo_nexo)} · ${escapeHtml(doc.nexo_id)}
         </p>

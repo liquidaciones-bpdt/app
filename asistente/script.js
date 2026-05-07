@@ -343,7 +343,7 @@ function normalizeDocs(docs = []) {
     id: d.id || d.documento_id,
     entityId: d.entityId || d.nexo_id || d.nexo,
     entityType: String(d.entityType || d.tipo_nexo || '').toLowerCase(),
-    type: d.type || d.tipo_documento || d.documento,
+    type: d.type || d.nombre_documento || d.documento,
     status: d.status || d.estado || d.estado_validacion || d.estado_vigencia || '-',
     expiryDate: d.expiryDate || d.fecha_vencimiento || d.vencimiento || '',
     fileUrl: d.fileUrl || d.archivo_url_actual || d.ruta_drive || ''
@@ -893,7 +893,7 @@ async function handleUploadDocument() {
 
     const payload = {
       user: state.user,
-      tipo_documento: state.activeDocType,
+      nombre_documento: state.activeDocType,
       nexo_id: state.activeDocEntityId,
       tipo_nexo: state.activeDocEntityType,
       fileBase64,

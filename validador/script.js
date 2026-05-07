@@ -978,7 +978,7 @@ function openRequirementModal(requisitoId = null) {
           </select>
         </div>
 
-        <div class="space-y-2">
+        <div class="space-y-2"> 
           <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tipo de documento</label>
           <input id="req-tipo-documento" class="input-brand" value="${escapeAttr(req?.nombre_documento || '')}" placeholder="Ej: SOAT" required>
         </div>

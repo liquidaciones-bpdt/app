@@ -668,7 +668,7 @@ function openUnitModal(id = null) {
     document.getElementById('form-unit-marca').value = unit.marca || '';
     document.getElementById('form-unit-modelo').value = unit.modelo || '';
     document.getElementById('form-unit-capacidad').value = unit.capacidad || '';
-    document.getElementById('form-unit-poliza').value = unit.numero_poliza || unit.poliza || '';
+    document.getElementById('form-unit-poliza').value = unit.poliza || unit.poliza || '';
 
     const isExclusiva = Boolean(unit.linea || unit.exclusiva === true || unit.exclusiva === 'true');
     document.getElementById('form-unit-exclusiva').checked = isExclusiva;
@@ -731,7 +731,7 @@ async function handleUnitSubmit(e) {
   anio: document.getElementById('form-unit-anio')?.value.trim() || '',
   capacidad: document.getElementById('form-unit-capacidad')?.value.trim() || '',
   telefono: document.getElementById('form-unit-telefono')?.value.trim() || '',
-  numero_poliza: document.getElementById('form-unit-poliza')?.value.trim() || '',
+  poliza: document.getElementById('form-unit-poliza')?.value.trim() || '',
   linea_exclusiva: document.getElementById('form-unit-exclusiva')?.checked
   ? document.getElementById('form-unit-linea')?.value.trim()
   : 'NO_EXCLUSIVA',

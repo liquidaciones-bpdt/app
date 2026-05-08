@@ -978,11 +978,34 @@ function openRequirementModal(requisitoId = null) {
           </select>
         </div>
 
-        <div class="space-y-2"> 
-          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tipo de documento</label>
-          <input id="req-tipo-documento" class="input-brand" value="${escapeAttr(req?.nombre_documento || '')}" placeholder="Ej: SOAT" required>
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">
+            Nombre Documento
+          </label>
+        
+          <input
+            id="req-nombre-documento"
+            class="input-brand"
+            value="${escapeAttr(req?.nombre_documento || '')}"
+            placeholder="Ej: SOAT"
+            required
+          >
         </div>
-
+        
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">
+            Grupo Documental
+          </label>
+        
+          <select id="req-grupo-documental" class="input-brand">
+            ${option('LEGAL', req?.grupo_documental)}
+            ${option('OPERATIVO', req?.grupo_documental)}
+            ${option('SEGURIDAD', req?.grupo_documental)}
+            ${option('RRHH', req?.grupo_documental)}
+            ${option('GENERAL', req?.grupo_documental)}
+          </select>
+        </div>
+        
         <div class="space-y-2">
           <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Aplica a campo</label>
           <input id="req-aplica-campo" class="input-brand" value="${escapeAttr(req?.aplica_a_campo || '')}" placeholder="Ej: sistema, cargo">
@@ -1017,6 +1040,20 @@ function openRequirementModal(requisitoId = null) {
         <div class="space-y-2">
           <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Días de alerta</label>
           <input id="req-dias-alerta" type="number" min="0" class="input-brand" value="${escapeAttr(req?.dias_alerta || 15)}">
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">
+            Orden
+          </label>
+        
+          <input
+            id="req-orden"
+            type="number"
+            min="0"
+            class="input-brand"
+            value="${escapeAttr(req?.orden || 0)}"
+          >
         </div>
 
         <div class="space-y-2">
@@ -1076,6 +1113,8 @@ async function handleRequirementSubmit(event) {
     aplica_a_campo: document.getElementById('req-aplica-campo')?.value.trim(),
     aplica_a_valor: document.getElementById('req-aplica-valor')?.value.trim(),
     nombre_documento: document.getElementById('req-tipo-documento')?.value.trim(),
+    grupo_documental: document.getElementById('req-grupo-documental')?.value.trim(),
+    orden: document.getElementById('req-orden')?.value.trim(),
     descripcion: document.getElementById('req-descripcion')?.value.trim(),
     obligatorio: document.getElementById('req-obligatorio')?.value.trim(),
     requiere_vencimiento: document.getElementById('req-vencimiento')?.value.trim(),

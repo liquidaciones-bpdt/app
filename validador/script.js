@@ -428,29 +428,23 @@ function normalizeRequirements(rows = []) {
     requisito_id: r.requisito_id || '',
 
     tipo_nexo: normalizeUpper(r.tipo_nexo || ''),
-
     aplica_a_campo: r.aplica_a_campo || '',
     aplica_a_valor: r.aplica_a_valor || '',
 
     nombre_documento: r.nombre_documento || '',
-
     grupo_documental: r.grupo_documental || 'GENERAL',
 
     descripcion: r.descripcion || '',
-
     obligatorio: normalizeUpper(r.obligatorio || 'SI'),
-
     requiere_vencimiento: normalizeUpper(r.requiere_vencimiento || 'SI'),
 
     dias_alerta: Number(r.dias_alerta || 15),
-
     orden: Number(r.orden || 0),
 
     estado: normalizeUpper(r.estado || 'ACTIVO'),
 
     creado_en: r.creado_en || '',
     actualizado_en: r.actualizado_en || '',
-
     creado_por: r.creado_por || '',
     actualizado_por: r.actualizado_por || ''
   }));
@@ -1112,7 +1106,7 @@ async function handleRequirementSubmit(event) {
     tipo_nexo: document.getElementById('req-tipo-nexo')?.value.trim(),
     aplica_a_campo: document.getElementById('req-aplica-campo')?.value.trim(),
     aplica_a_valor: document.getElementById('req-aplica-valor')?.value.trim(),
-    nombre_documento: document.getElementById('req-tipo-documento')?.value.trim(),
+    nombre_documento: document.getElementById('req-nombre-documento')?.value.trim(),
     grupo_documental: document.getElementById('req-grupo-documental')?.value.trim(),
     orden: document.getElementById('req-orden')?.value.trim(),
     descripcion: document.getElementById('req-descripcion')?.value.trim(),
@@ -1123,7 +1117,7 @@ async function handleRequirementSubmit(event) {
   };
 
   if (!payload.tipo_nexo || !payload.nombre_documento) {
-    alert('Complete tipo de nexo y tipo de documento.');
+    alert('Complete la relacion y documento.');
     return;
   }
 

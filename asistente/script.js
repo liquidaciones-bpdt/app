@@ -17,9 +17,10 @@ const state = {
   },
   filterType: 'all',
   activeDocId: null,
-activeDocType: null,
-activeDocEntityId: null,
-activeDocEntityType: null,
+  activeDocType: null,
+  activeDocEntityId: null,
+  activeDocEntityType: null,
+  activeRequirementId: null,
   refreshing: false
 };
 
@@ -341,12 +342,33 @@ function normalizeDocs(docs = []) {
   return docs.map(d => ({
     ...d,
     id: d.id || d.documento_id,
+    documento_id: d.documento_id || d.id || '',
+
+    requisito_id: d.requisito_id || '',
+
     entityId: d.entityId || d.nexo_id || d.nexo,
     entityType: String(d.entityType || d.tipo_nexo || '').toLowerCase(),
+
     type: d.type || d.nombre_documento || d.documento,
+    nombre_documento: d.nombre_documento || d.type || d.documento,
+
+    grupo_documental: d.grupo_documental || 'GENERAL',
+    descripcion: d.descripcion || '',
+
     status: d.status || d.estado || d.estado_validacion || d.estado_vigencia || '-',
+    estado_vigencia: d.estado_vigencia || d.status || '-',
+
     expiryDate: d.expiryDate || d.fecha_vencimiento || d.vencimiento || '',
-    fileUrl: d.fileUrl || d.archivo_url_actual || d.ruta_drive || ''
+    fecha_vencimiento: d.fecha_vencimiento || d.expiryDate || '',
+
+    fileUrl: d.fileUrl || d.archivo_url_actual || d.ruta_drive || '',
+    archivo_url_actual: d.archivo_url_actual || d.fileUrl || '',
+
+    requiere_vencimiento: d.requiere_vencimiento || 'SI',
+    dias_alerta: d.dias_alerta || 15,
+
+    tiene_pendiente: Boolean(d.tiene_pendiente),
+    tiene_documento_aprobado: Boolean(d.tiene_documento_aprobado)
   }));
 }
 
@@ -611,7 +633,7 @@ function renderDocs() {
               <button onclick="${d.fileUrl ? `window.open('${escapeHtml(d.fileUrl)}', '_blank')` : `alert('No hay archivo aprobado disponible.')`}" class="flex-1 py-3 border border-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">
                 BAJAR
               </button>
-              <button onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}', '${escapeHtml(d.entityType)}')" class="flex-1 py-3 bg-[#E20613] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510] shadow-lg shadow-red-100">
+              <button onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}', '${escapeHtml(d.entityType)}', '${escapeHtml(d.requisito_id || '')}')" class="flex-1 py-3 bg-[#E20613] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510] shadow-lg shadow-red-100">
                 SUBIR
               </button>
             </div>
@@ -826,10 +848,19 @@ async function handleCrewSubmit(event) {
   }
 }
 
-function openUpload(id, type, entityType = '') {
+function openUpload(id, type, entityType = '', requisitoId = '') {
+  const finalEntityType = entityType || state.filterType;
+
   state.activeDocEntityId = id;
   state.activeDocType = type;
-  state.activeDocEntityType = entityType || state.filterType;
+  state.activeDocEntityType = finalEntityType;
+  state.activeRequirementId = requisitoId;
+
+  const doc = state.data.docs.find(d =>
+    String(d.entityId) === String(id) &&
+    String(d.type) === String(type) &&
+    String(d.entityType) === String(finalEntityType)
+  );
 
   const details = document.getElementById('upload-details');
   if (details) {
@@ -839,10 +870,17 @@ function openUpload(id, type, entityType = '') {
   const fileInput = document.getElementById('upload-file');
   const fileLabel = document.getElementById('upload-file-label');
   const expiryInput = document.getElementById('upload-expiry');
+  const expiryWrapper = expiryInput?.closest('.space-y-2');
 
   if (fileInput) fileInput.value = '';
   if (fileLabel) fileLabel.innerText = 'Seleccionar o Arrastrar Archivo';
   if (expiryInput) expiryInput.value = '';
+
+  if (doc && String(doc.requiere_vencimiento || '').toUpperCase() === 'NO') {
+    if (expiryWrapper) expiryWrapper.classList.add('hidden');
+  } else {
+    if (expiryWrapper) expiryWrapper.classList.remove('hidden');
+  }
 
   document.getElementById('upload-modal')?.classList.remove('hidden');
   document.getElementById('upload-modal')?.classList.add('flex');
@@ -883,9 +921,36 @@ async function handleUploadDocument() {
     return;
   }
 
+  const allowedTypes = [
+    'application/pdf',
+    'image/jpeg',
+    'image/png'
+  ];
+
+  if (!allowedTypes.includes(file.type)) {
+    alert('Formato no permitido. Solo PDF, JPG, JPEG o PNG.');
+    return;
+  }
+
   const maxSizeMb = 10;
+
   if (file.size > maxSizeMb * 1024 * 1024) {
     alert('El archivo supera el máximo permitido de 10MB.');
+    return;
+  }
+
+  const currentDoc = state.data.docs.find(d =>
+    String(d.entityId) === String(state.activeDocEntityId) &&
+    String(d.type) === String(state.activeDocType) &&
+    String(d.entityType) === String(state.activeDocEntityType)
+  );
+
+  if (
+    currentDoc &&
+    String(currentDoc.requiere_vencimiento || '').toUpperCase() === 'SI' &&
+    !expiryInput?.value
+  ) {
+    alert('Ingrese la fecha de vencimiento para este documento.');
     return;
   }
 
@@ -896,6 +961,7 @@ async function handleUploadDocument() {
 
     const payload = {
       user: state.user,
+      requisito_id: state.activeRequirementId || '',
       nombre_documento: state.activeDocType,
       nexo_id: state.activeDocEntityId,
       tipo_nexo: String(state.activeDocEntityType || '').toUpperCase(),

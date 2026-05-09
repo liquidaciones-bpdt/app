@@ -585,7 +585,7 @@ function renderCrew() {
   refreshIcons();
 }
 
-function filterDocs(type) {
+function filterDocs(type, ev = null) {
   state.filterType = type;
 
   document.querySelectorAll('.doc-filter-btn').forEach(btn => {
@@ -593,9 +593,11 @@ function filterDocs(type) {
     btn.classList.remove('bg-slate-900', 'text-white', 'shadow-xl');
   });
 
-  if (event?.target) {
-    event.target.classList.remove('bg-white', 'text-slate-500', 'border-slate-100');
-    event.target.classList.add('bg-slate-900', 'text-white', 'shadow-xl');
+  const target = ev?.target || document.querySelector(`[onclick="filterDocs('${type}')"]`);
+
+  if (target) {
+    target.classList.remove('bg-white', 'text-slate-500', 'border-slate-100');
+    target.classList.add('bg-slate-900', 'text-white', 'shadow-xl');
   }
 
   renderDocs();
@@ -696,7 +698,7 @@ function openUnitModal(id = null) {
     const isExclusiva = lineaValue && lineaValue !== 'NO_EXCLUSIVA';
     document.getElementById('form-unit-exclusiva').checked = isExclusiva;
     toggleLineaExclusiva(isExclusiva);
-    document.getElementById('form-unit-linea').value = unit.linea || '';
+    document.getElementById('form-unit-linea').value = isExclusiva ? lineaValue : '';
 
   } else {
     if (title) title.innerText = 'Registrar Unidad';
@@ -1151,17 +1153,6 @@ if (uploadFile) {
   });
 }
   
-
-  const unitForm = document.getElementById('unit-form');
-  if (unitForm) {
-    unitForm.addEventListener('submit', handleUnitSubmit);
-  }
-
-  const crewForm = document.getElementById('crew-form');
-  if (crewForm) {
-    crewForm.addEventListener('submit', handleCrewSubmit);
-  }
-
   if (state.user) {
     document.getElementById('login-modal')?.classList.add('hidden');
     document.getElementById('app-container')?.classList.remove('hidden');

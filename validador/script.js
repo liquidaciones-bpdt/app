@@ -914,7 +914,7 @@ function renderRequirementCard(req) {
             <p class="text-sm text-slate-500 mt-3">${escapeHtml(req.descripcion || 'Sin descripción')}</p>
 
             <p class="text-xs text-slate-400 mt-1">
-              Obligatorio: ${escapeHtml(req.obligatorio)} · Vencimiento: ${escapeHtml(req.requiere_vencimiento)} · Alerta: ${escapeHtml(req.dias_alerta)} días
+              Grupo: ${escapeHtml(req.grupo_documental)} · Obligatorio: ${escapeHtml(req.obligatorio)} · Vencimiento: ${escapeHtml(req.requiere_vencimiento)} · Alerta: ${escapeHtml(req.dias_alerta)} días · Orden: ${escapeHtml(req.orden)}
             </p>
           </div>
         </div>
@@ -1105,7 +1105,7 @@ async function handleRequirementSubmit(event) {
     requisito_id: requisitoId,
     tipo_nexo: document.getElementById('req-tipo-nexo')?.value.trim(),
     aplica_a_campo: document.getElementById('req-aplica-campo')?.value.trim(),
-    aplica_a_valor: document.getElementById('req-aplica-valor')?.value.trim(),
+    aplica_a_valor: document.getElementById('req-aplica-valor')?.value.trim() || 'TODOS',
     nombre_documento: document.getElementById('req-nombre-documento')?.value.trim(),
     grupo_documental: document.getElementById('req-grupo-documental')?.value.trim(),
     orden: document.getElementById('req-orden')?.value.trim(),

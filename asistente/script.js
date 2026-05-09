@@ -608,7 +608,7 @@ function renderDocs() {
               <p class="text-xs font-medium">Vence: <span class="font-bold text-slate-700">${escapeHtml(d.expiryDate || 'N/A')}</span></p>
             </div>
             <div class="flex gap-2">
-              <button onclick="${d.fileUrl ? `window.open('${escapeHtml(d.fileUrl)}', '_blank')` : ''}" class="flex-1 py-3 border border-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">
+              <button onclick="${d.fileUrl ? `window.open('${escapeHtml(d.fileUrl)}', '_blank')` : `alert('No hay archivo aprobado disponible.')`}" class="flex-1 py-3 border border-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">
                 BAJAR
               </button>
               <button onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}', '${escapeHtml(d.entityType)}')" class="flex-1 py-3 bg-[#E20613] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510] shadow-lg shadow-red-100">
@@ -668,9 +668,10 @@ function openUnitModal(id = null) {
     document.getElementById('form-unit-marca').value = unit.marca || '';
     document.getElementById('form-unit-modelo').value = unit.modelo || '';
     document.getElementById('form-unit-capacidad').value = unit.capacidad || '';
-    document.getElementById('form-unit-poliza').value = unit.poliza || unit.poliza || '';
+    document.getElementById('form-unit-poliza').value = unit.poliza || '';
 
-    const isExclusiva = Boolean(unit.linea || unit.exclusiva === true || unit.exclusiva === 'true');
+    const lineaValue = unit.linea || unit.linea_exclusiva || '';
+    const isExclusiva = lineaValue && lineaValue !== 'NO_EXCLUSIVA';
     document.getElementById('form-unit-exclusiva').checked = isExclusiva;
     toggleLineaExclusiva(isExclusiva);
     document.getElementById('form-unit-linea').value = unit.linea || '';
@@ -897,7 +898,7 @@ async function handleUploadDocument() {
       user: state.user,
       nombre_documento: state.activeDocType,
       nexo_id: state.activeDocEntityId,
-      tipo_nexo: state.activeDocEntityType,
+      tipo_nexo: String(state.activeDocEntityType || '').toUpperCase(),
       fileBase64,
       fileName: file.name,
       mimeType: file.type || 'application/pdf',

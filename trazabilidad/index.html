@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HT-BPDT | Trazabilidad Climatizada</title>
+  
+  <!-- Estilos e Iconos -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #E20613;
+      --primary-hover: #c20510;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --border: #f1f5f9;
+    }
+
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      background-color: var(--bg); 
+      color: var(--text-main); 
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .nav-active { 
+      background-color: var(--primary); 
+      color: white !important; 
+      box-shadow: 0 10px 20px -5px rgba(226, 6, 19, 0.25); 
+    }
+
+    .nav-active:hover {
+      background-color: var(--primary-hover) !important;
+      color: white !important;
+    }
+
+    .card-brand { 
+      background: var(--card-bg); 
+      border: 1px solid var(--border); 
+      border-radius: 1.5rem; 
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .card-brand:hover {
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+    }
+
+    .input-brand { 
+      background: #f8fafc; 
+      border: 1px solid #e2e8f0; 
+      border-radius: 0.75rem; 
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+    
+    .input-brand:focus { 
+      border-color: var(--primary); 
+      outline: none; 
+      background: white; 
+      box-shadow: 0 0 0 4px rgba(226, 6, 19, 0.08);
+    }
+
+    .btn-primary { 
+      background: var(--primary); 
+      color: white; 
+      border-radius: 0.875rem; 
+      font-weight: 700; 
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .btn-primary:hover { 
+      background: var(--primary-hover); 
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(226, 6, 19, 0.3);
+    }
+
+    .loader-spin { animation: spin 0.8s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* Transitions */
+    .tab-view {
+      animation: fadeIn 0.4s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+      border: 1px solid transparent;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+  <!-- APP LOADER -->
+  <div id="app-loader" class="fixed inset-0 z-[100] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center hidden">
+    <div class="w-12 h-12 border-4 border-slate-200 border-t-[#E20613] rounded-full loader-spin mb-4"></div>
+    <p id="loader-text" class="font-bold text-slate-500 uppercase tracking-widest text-xs">Cargando...</p>
+  </div>
+
+  <!-- LOGIN SECTION -->
+  <div id="login-section" class="fixed inset-0 z-[90] bg-[#f8fafc] flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-md space-y-8 text-center">
+      <div class="inline-flex p-5 bg-[#E20613] rounded-[2.5rem] shadow-2xl text-white">
+        <i data-lucide="shield-check" size="48"></i>
+      </div>
+      <div>
+        <h1 class="text-3xl font-extrabold tracking-tighter uppercase text-slate-900">Trazabilidad Climatizada</h1>
+        <p class="text-slate-400 font-medium uppercase tracking-[0.3em] text-[10px] mt-2">HT-BPDT Gestión de Viajes</p>
+      </div>
+      
+      <form id="login-form" class="bg-white p-10 rounded-[3rem] shadow-2xl border border-slate-100 space-y-6 text-left">
+        <div class="space-y-2">
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Número de DNI</label>
+          <input type="text" id="login-dni" class="w-full p-4 input-brand font-bold" placeholder="Ingresa tu DNI" required>
+        </div>
+        <div class="space-y-2">
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Contraseña</label>
+          <input type="password" id="login-pass" class="w-full p-4 input-brand font-bold" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="w-full py-5 btn-primary uppercase tracking-widest text-sm shadow-xl shadow-red-200">Acceder al Sistema</button>
+      </form>
+      <p class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">Sistemas HT-BPDT © 2026</p>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="app-container" class="flex min-h-screen hidden">
+    
+    <!-- SIDEBAR -->
+    <aside class="fixed left-0 top-0 h-full w-[280px] bg-white border-r border-slate-100 p-8 flex flex-col z-50">
+      <div class="flex items-center gap-4 mb-12">
+        <div class="p-3 bg-[#E20613] rounded-2xl text-white shadow-lg">
+          <i data-lucide="truck" size="24"></i>
+        </div>
+        <div>
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">HT-BPDT</p>
+          <h2 class="text-lg font-black text-slate-900 tracking-tighter uppercase">Trazabilidad Climatizada</h2>
+        </div>
+      </div>
+
+      <nav class="flex-1 space-y-2">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all hover:bg-slate-50 text-slate-500 nav-active">
+          <i data-lucide="layout-dashboard" size="20"></i> Dashboard
+        </button>
+        <button onclick="switchTab('registry')" id="nav-registry" class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all hover:bg-slate-50 text-slate-500">
+          <i data-lucide="file-edit" size="20"></i> Registro
+        </button>
+        <button onclick="switchTab('history')" id="nav-history" class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all hover:bg-slate-50 text-slate-500">
+          <i data-lucide="history" size="20"></i> Consulta Histórica
+        </button>
+      </nav>
+
+      <div class="mt-auto space-y-6">
+        <div class="p-4 bg-slate-50 rounded-2xl">
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Usuario Actual</p>
+          <p id="user-name" class="font-black text-slate-900 text-xs uppercase truncate">---</p>
+          <p id="user-role" class="text-[10px] font-bold text-slate-400 uppercase">Validador</p>
+        </div>
+        <button onclick="logout()" class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm text-slate-400 hover:text-[#E20613] hover:bg-red-50 transition-all">
+          <i data-lucide="log-out" size="20"></i> Cerrar Sesión
+        </button>
+      </div>
+    </aside>
+
+    <!-- CONTENT AREA -->
+    <main class="flex-1 ml-[280px] p-10 max-w-[1600px] mx-auto">
+      
+      <!-- TOP HEADER -->
+      <header class="flex justify-between items-center mb-10">
+        <div>
+          <h2 id="view-title" class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Dashboard</h2>
+          <p id="view-subtitle" class="text-slate-400 font-medium italic">Resumen de cumplimiento térmico y trazabilidad.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="openUploadModal()" class="w-12 h-12 bg-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-xl transition-all" title="Cargar Datos">
+            <i data-lucide="upload-cloud" size="20"></i>
+          </button>
+          <button onclick="refreshData()" class="w-12 h-12 bg-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-[#E20613] hover:shadow-xl transition-all" title="Actualizar">
+            <i data-lucide="refresh-cw" id="header-refresh-icon" size="20"></i>
+          </button>
+          <div class="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white" id="user-avatar">
+            <span class="font-black text-lg" id="user-initials">V</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEW: DASHBOARD -->
+      <section id="view-dashboard" class="tab-view space-y-10">
+        <div id="stats-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- KPI Cards will be injected here -->
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 card-brand p-8">
+            <h3 class="font-black text-xl mb-6 flex items-center gap-3"><i data-lucide="activity" class="text-[#E20613]"></i> Avance de Gestión</h3>
+            <div id="dashboard-progress">
+              <!-- Progress charts / summaries -->
+            </div>
+          </div>
+          <div class="card-brand p-8">
+            <h3 class="font-black text-xl mb-6">Estado de Incidencias</h3>
+            <div id="dashboard-incidents" class="space-y-4">
+              <!-- recent incidents -->
+            </div>
+          </div>
+        </div>
+
+        <!-- RESUMEN POR EMPRESA -->
+        <div class="card-brand p-8">
+          <div class="flex items-center justify-between mb-8">
+            <div>
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Análisis por Transportista</p>
+              <h3 class="text-2xl font-black text-slate-900 tracking-tighter uppercase">Resumen de Cumplimiento</h3>
+            </div>
+            <div class="p-3 bg-blue-50 text-blue-500 rounded-2xl">
+              <i data-lucide="truck"></i>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
+                  <th class="px-6 py-4">Empresa / Razón Social</th>
+                  <th class="px-6 py-4 text-center">Viajes Trazados</th>
+                  <th class="px-6 py-4 text-center">Cumplen Requisitos</th>
+                  <th class="px-6 py-4 text-right">Eficiencia</th>
+                </tr>
+              </thead>
+              <tbody id="company-summary-body" class="divide-y divide-slate-50">
+                <!-- Data rows injected by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: REGISTRY -->
+      <section id="view-registry" class="tab-view hidden space-y-10">
+        <div class="card-brand p-8">
+          <div class="flex justify-between items-center mb-8">
+            <h3 class="font-black text-2xl tracking-tighter uppercase">Viajes Pendientes</h3>
+            <div class="flex gap-4">
+               <input type="text" id="reg-search" placeholder="Buscar por placa o viaje..." class="px-6 py-3 input-brand w-80 text-sm font-bold">
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
+                  <th class="px-6 py-4">Fecha</th>
+                  <th class="px-6 py-4">Viaje</th>
+                  <th class="px-6 py-4">Placa</th>
+                  <th class="px-6 py-4">Estado</th>
+                  <th class="px-6 py-4 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="registry-table-body" class="divide-y divide-slate-50">
+                <!-- pending rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: HISTORY -->
+      <section id="view-history" class="tab-view hidden space-y-8">
+        <div class="card-brand p-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <input type="date" id="hist-date-from" class="p-4 input-brand font-bold text-xs" title="Desde">
+            <input type="date" id="hist-date-to" class="p-4 input-brand font-bold text-xs" title="Hasta">
+            <select id="hist-filter-cd" class="p-4 input-brand font-bold text-xs">
+              <option value="">Todos los CD</option>
+              <!-- Dinámico -->
+            </select>
+            <select id="hist-filter-complete" class="p-4 input-brand font-bold text-xs">
+              <option value="">Trazabilidad Doc.</option>
+              <option value="SI">SI (Completa)</option>
+              <option value="NO">NO (Incompleta)</option>
+            </select>
+            <select id="hist-filter-inc-status" class="p-4 input-brand font-bold text-xs uppercase">
+              <option value="">Estado Incidencia</option>
+              <option value="SIN_INCIDENCIA">Sin Incidencia</option>
+              <option value="ABIERTA">Abierta</option>
+              <option value="REPORTADA">Reportada</option>
+              <option value="EN_SEGUIMIENTO">En Seguimiento</option>
+              <option value="CERRADA">Cerrada</option>
+            </select>
+            <select id="hist-filter-status" class="p-4 input-brand font-bold text-xs uppercase">
+              <option value="">Todos los Estados</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="CERRADO">Cerrado</option>
+              <option value="OBSERVADO">Observado</option>
+              <option value="ANULADO">Anulado</option>
+            </select>
+            <button onclick="applyHistoryFilters()" class="btn-primary py-4 text-xs tracking-widest">Filtrar</button>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead>
+                <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
+                  <th class="px-6 py-4">Fecha</th>
+                  <th class="px-6 py-4">Centro Dist.</th>
+                  <th class="px-6 py-4">Detalle Viaje</th>
+                  <th class="px-6 py-4">Control Temp.</th>
+                  <th class="px-6 py-4">Doc. Completa</th>
+                  <th class="px-6 py-4">Estado</th>
+                  <th class="px-6 py-4 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body" class="divide-y divide-slate-50">
+                <!-- historical rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- UPLOAD MODAL -->
+  <div id="upload-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-md hidden items-center justify-center p-6">
+    <div class="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl p-12 relative">
+      <button onclick="closeUploadModal()" class="absolute top-8 right-8 text-slate-300 hover:text-red-500"><i data-lucide="x"></i></button>
+      
+      <div class="space-y-8">
+        <div class="text-center space-y-2">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Importación de Datos</p>
+          <h3 class="text-3xl font-black text-slate-900 tracking-tighter uppercase">Carga de Viajes</h3>
+        </div>
+
+        <div id="drop-zone" class="border-4 border-dashed border-slate-100 rounded-[2rem] p-12 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-50 hover:border-blue-100 transition-all group">
+          <input type="file" id="file-input" class="hidden" accept=".xlsx,.xls">
+          <div class="p-6 bg-white rounded-2xl text-slate-300 group-hover:text-blue-500 shadow-xl mb-4 transition-all">
+            <i data-lucide="upload" size="32"></i>
+          </div>
+          <p class="font-black text-slate-600">Suelta tu archivo Excel aquí</p>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Columnas: Fecha, Placa, Viaje, Tipo</p>
+        </div>
+
+        <div id="upload-preview" class="hidden space-y-6">
+          <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+            <div class="flex items-center gap-4">
+              <i data-lucide="file-check" class="text-emerald-500"></i>
+              <span id="file-name" class="font-bold text-slate-700 text-sm">---</span>
+            </div>
+            <button onclick="clearUpload()" class="text-slate-400 hover:text-red-500"><i data-lucide="trash-2" size="18"></i></button>
+          </div>
+          <button onclick="processUpload()" id="btn-process-upload" class="w-full btn-primary py-5 shadow-xl shadow-red-200 flex items-center justify-center gap-3">
+             <i data-lucide="play-circle"></i> Confirmar Carga
+          </button>
+        </div>
+
+        <div id="upload-result" class="hidden p-6 bg-slate-900 rounded-3xl text-white">
+          <h4 class="font-black text-lg mb-4 flex items-center gap-3 text-emerald-400"><i data-lucide="check-circle"></i> Carga Exitosa</h4>
+          <div id="upload-stats" class="grid grid-cols-2 gap-4 text-[10px] font-bold opacity-80 uppercase tracking-widest"></div>
+          <div id="upload-errors" class="mt-4 pt-4 border-t border-white/10 space-y-2 text-[10px] text-red-400 hidden overflow-y-auto max-h-32"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTRY MODAL (COMPLETE TRAZABILIDAD) -->
+  <div id="registry-modal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-md hidden items-center justify-center p-6">
+    <div class="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl p-12 relative">
+      <button onclick="closeRegistryModal()" class="absolute top-8 right-8 text-slate-300 hover:text-red-500"><i data-lucide="x"></i></button>
+      
+      <div class="space-y-8">
+        <div>
+          <p id="modal-sub" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Completar Registro</p>
+          <h3 id="modal-title" class="text-3xl font-black text-slate-900 tracking-tighter uppercase">DT|58964|F6N787</h3>
+        </div>
+
+        <form id="registry-form" class="space-y-6">
+          <input type="hidden" id="reg-id">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Rango de Temperatura</label>
+              <select id="reg-range" class="w-full p-4 input-brand font-bold text-slate-700" required>
+                <option value="">Seleccionar...</option>
+                <option value="CUMPLE">CUMPLE</option>
+                <option value="NO_CUMPLE">NO_CUMPLE</option>
+              </select>
+            </div>
+            <div class="space-y-2">
+              <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Doc. Trazabilidad Completa</label>
+              <select id="reg-complete" class="w-full p-4 input-brand font-bold text-slate-700" required>
+                <option value="">Seleccionar...</option>
+                <option value="SI">SI</option>
+                <option value="NO">NO</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Estado Incidencia</label>
+            <select id="reg-inc-status" class="w-full p-4 input-brand font-bold text-slate-700">
+              <option value="SIN_INCIDENCIA">SIN INCIDENCIA</option>
+              <option value="ABIERTA">ABIERTA</option>
+              <option value="REPORTADA">REPORTADA</option>
+              <option value="EN_SEGUIMIENTO">EN SEGUIMIENTO</option>
+              <option value="CERRADA">CERRADA</option>
+            </select>
+          </div>
+
+          <div id="inc-detail-group" class="space-y-2 hidden">
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Detalle de la Incidencia</label>
+            <textarea id="reg-inc-detail" class="w-full p-4 input-brand font-bold min-h-[100px]" placeholder="Describe la desviación de temperatura..."></textarea>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Observaciones</label>
+            <textarea id="reg-obs" class="w-full p-4 input-brand font-bold mb-6" placeholder="Comentarios adicionales..."></textarea>
+          </div>
+
+          <button type="submit" class="w-full btn-primary py-5 shadow-xl shadow-red-200">Guardar Trazabilidad</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT JS -->
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+
+</body>
+</html>

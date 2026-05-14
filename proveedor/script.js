@@ -441,12 +441,21 @@ function renderDashboard() {
                 <circle cx="50" cy="50" r="42" fill="transparent" stroke="#E20613" stroke-width="10" stroke-dasharray="263.89" stroke-dashoffset="${263.89 * (1 - globalVal / 100)}" stroke-linecap="round"></circle>
               </svg>
               <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="text-5xl font-black">${globalVal}%</span>
+                <span class="text-4xl font-black">${globalVal}%</span>
                 <span class="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 mt-2">Cumplimiento</span>
               </div>
             </div>
           </div>
         </div>
+      </section>
+
+      <section class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5">
+        ${renderDashboardKpi('Vigentes', stats.vigentes || 0, 'check-circle-2')}
+        ${renderDashboardKpi('Faltantes', stats.faltantes || 0, 'file-warning')}
+        ${renderDashboardKpi('Observados', stats.observados || 0, 'eye')}
+        ${renderDashboardKpi('Rechazados', stats.rechazados || 0, 'x-circle')}
+        ${renderDashboardKpi('Por vencer', stats.por_vencer || 0, 'clock')}
+        ${renderDashboardKpi('Vencidos', stats.vencidos || 0, 'alert-circle')}
       </section>
 
       <section class="card-brand">
@@ -470,15 +479,6 @@ function renderDashboard() {
                 </div>`
           }
         </div>
-      </section>
-
-      <section class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-5">
-        ${renderDashboardKpi('Vigentes', stats.vigentes || 0, 'check-circle-2')}
-        ${renderDashboardKpi('Faltantes', stats.faltantes || 0, 'file-warning')}
-        ${renderDashboardKpi('Observados', stats.observados || 0, 'eye')}
-        ${renderDashboardKpi('Rechazados', stats.rechazados || 0, 'x-circle')}
-        ${renderDashboardKpi('Por vencer', stats.por_vencer || 0, 'clock')}
-        ${renderDashboardKpi('Vencidos', stats.vencidos || 0, 'alert-circle')}
       </section>
 
       <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -556,7 +556,7 @@ function renderMiniKpi(label, value) {
 
 function renderDashboardKpi(label, value, icon) {
   return `
-    <div class="card-brand p-6">
+    <div class="card-brand p-6 min-h-[180px] flex flex-col justify-between">
       <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[#E20613] mb-6">
         <i data-lucide="${icon}" size="22"></i>
       </div>
@@ -856,7 +856,7 @@ if (state.filterStatus !== 'all') {
     <div class="space-y-5">
       ${renderDocsStatusFilters()}
 
-      <div class="card-brand p-10 text-center text-slate-400 font-bold">
+      <div class="card-brand p-6 text-center text-slate-400 font-bold">
         No hay documentos para mostrar.
       </div>
     </div>

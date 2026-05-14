@@ -13,7 +13,8 @@ const state = {
     docs: [],
     historial: [],
     requisitos: [],
-    stats: null
+    stats: null,
+    acciones_requeridas: []
   },
   filterType: 'all',
   activeDocId: null,
@@ -278,7 +279,9 @@ async function refreshData(silent = false) {
       docs: normalizeDocs(res.docs || []),
       historial: res.historial || [],
       requisitos: res.requisitos || [],
-      stats: res.stats || null
+      stats: res.stats || null,
+      empresa: res.empresa || null,
+      acciones_requeridas: res.acciones_requeridas || []
     };
 
     if (res.user) {
@@ -381,82 +384,274 @@ function renderTab() {
 }
 
 function renderDashboard() {
-  const { stats, units, crew } = state.data;
-  if (!stats) return;
+  const view = document.getElementById('view-dashboard');
+  if (!view) return;
+
+  const stats = state.data.stats || {};
+  const actions = state.data.acciones_requeridas || [];
+  const units = state.data.units || [];
+  const crew = state.data.crew || [];
 
   const globalVal = clampPercent(stats.companyCompliance || 0);
+  const estado = stats.estado_operacional || state.data.empresa?.estado_operacional || 'SIN_REQUISITOS';
+  const estadoMeta = getOperationalStatusMeta(estado);
 
-  const ring = document.getElementById('compliance-ring');
-  const valText = document.getElementById('compliance-val');
-  const offset = 263.89 * (1 - globalVal / 100);
+  const criticalUnits = [...units]
+    .sort((a, b) => clampPercent(a.compliance) - clampPercent(b.compliance))
+    .slice(0, 4);
 
-  if (valText) valText.innerText = `${globalVal}%`;
-  if (ring) setTimeout(() => ring.style.strokeDashoffset = offset, 100);
+  const criticalCrew = [...crew]
+    .sort((a, b) => clampPercent(a.compliance) - clampPercent(b.compliance))
+    .slice(0, 4);
 
-  renderStatBlock('stat-flota', 'Flota', stats.unitsCompliance || 0, '#10B981', 'Requisitos de unidad al día', '');
-  renderStatBlock('stat-trip', 'Tripulación', stats.crewCompliance || 0, '#F59E0B', 'Licencias y capacitaciones', '');
-  renderStatBlock('stat-empresa', 'Empresa', stats.companyCompliance || 0, '#3B82F6', 'Carga tributaria y legal', '');
+  view.innerHTML = `
+    <div class="space-y-10">
 
-  const alertEl = document.getElementById('expired-alert');
+      <section class="card-brand bg-slate-900 text-white border-none overflow-hidden relative">
+        <div class="absolute right-[-80px] top-[-80px] w-64 h-64 bg-[#E20613]/20 rounded-full blur-3xl"></div>
 
-  if (alertEl) {
-    if ((stats.expiredTodayCount || 0) > 0) {
-      alertEl.classList.remove('hidden');
-      alertEl.classList.add('flex');
+        <div class="relative grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-10 items-center">
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3">Estado de cumplimiento</p>
 
-      const text = document.getElementById('expired-text');
-      if (text) {
-        text.innerHTML = `Hay <strong>${stats.expiredTodayCount} documentos vencidos</strong> que requieren atención.`;
-      }
-    } else {
-      alertEl.classList.add('hidden');
-      alertEl.classList.remove('flex');
-    }
-  }
+            <div class="flex flex-wrap items-center gap-4 mb-5">
+              <h3 class="text-4xl font-black tracking-tight">${estadoMeta.label}</h3>
+              <span class="${estadoMeta.badge} px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest">
+                ${escapeHtml(estado)}
+              </span>
+            </div>
 
-  const fleetContainer = document.getElementById('fleet-summary-list');
+            <p class="text-slate-300 font-medium max-w-2xl">
+              ${escapeHtml(estadoMeta.message)}
+            </p>
 
-  if (fleetContainer) {
-    fleetContainer.innerHTML = units.length
-      ? units.slice(0, 3).map(u => `
-          <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-300 border border-slate-100">
-                <i data-lucide="truck" size="20"></i>
-              </div>
-              <div>
-                <p class="font-black text-slate-900">${escapeHtml(getUnitId(u))}</p>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${escapeHtml(u.sistema || '-')}</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+              ${renderMiniKpi('Acciones pendientes', stats.acciones_pendientes || stats.pendingCount || 0)}
+              ${renderMiniKpi('En validación', stats.documentos_en_validacion || stats.pendientes_validacion || 0)}
+              ${renderMiniKpi('Total requisitos', stats.total_requisitos || 0)}
+              ${renderMiniKpi('Documentos válidos', stats.documentos_validos || 0)}
+            </div>
+          </div>
+
+          <div class="flex justify-center">
+            <div class="relative w-56 h-56">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="transparent" stroke="rgba(255,255,255,0.12)" stroke-width="10"></circle>
+                <circle cx="50" cy="50" r="42" fill="transparent" stroke="#E20613" stroke-width="10" stroke-dasharray="263.89" stroke-dashoffset="${263.89 * (1 - globalVal / 100)}" stroke-linecap="round"></circle>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-5xl font-black">${globalVal}%</span>
+                <span class="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 mt-2">Cumplimiento</span>
               </div>
             </div>
-            <p class="text-sm font-black text-emerald-500">${clampPercent(u.compliance)}%</p>
           </div>
-        `).join('')
-      : `<div class="p-8 text-center text-slate-400 font-bold">No hay unidades registradas.</div>`;
-  }
+        </div>
+      </section>
 
-  const crewContainer = document.getElementById('crew-summary-list');
-
-  if (crewContainer) {
-    crewContainer.innerHTML = crew.length
-      ? crew.slice(0, 3).map(c => `
-          <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-300 border border-slate-100">
-                <i data-lucide="user" size="20"></i>
-              </div>
-              <div>
-                <p class="font-black text-slate-900">${escapeHtml(getCrewName(c))}</p>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${escapeHtml(getCrewRole(c))}</p>
-              </div>
-            </div>
-            <span class="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase">REVISAR</span>
+      <section class="card-brand">
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h3 class="text-2xl font-black uppercase tracking-tight">Acciones requeridas</h3>
+            <p class="text-sm text-slate-400 font-medium mt-1">Prioridad documental para quedar apto.</p>
           </div>
-        `).join('')
-      : `<div class="p-8 text-center text-slate-400 font-bold">No hay tripulantes registrados.</div>`;
-  }
+
+          <button type="button" onclick="switchTab('docs')" class="btn-primary px-5 py-3 text-[10px]">
+            Ver todo
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          ${
+            actions.length
+              ? actions.map(renderRequiredAction).join('')
+              : `<div class="p-8 rounded-[32px] bg-emerald-50 text-emerald-700 font-bold text-center">
+                  No tienes acciones documentales pendientes.
+                </div>`
+          }
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-5">
+        ${renderDashboardKpi('Vigentes', stats.vigentes || 0, 'check-circle-2')}
+        ${renderDashboardKpi('Faltantes', stats.faltantes || 0, 'file-warning')}
+        ${renderDashboardKpi('Observados', stats.observados || 0, 'eye')}
+        ${renderDashboardKpi('Rechazados', stats.rechazados || 0, 'x-circle')}
+        ${renderDashboardKpi('Por vencer', stats.por_vencer || 0, 'clock')}
+        ${renderDashboardKpi('Vencidos', stats.vencidos || 0, 'alert-circle')}
+      </section>
+
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="card-brand">
+          <h3 class="font-black text-xl tracking-tight uppercase mb-6">Unidades con menor cumplimiento</h3>
+          <div class="space-y-4">
+            ${
+              criticalUnits.length
+                ? criticalUnits.map(u => renderEntitySummary(getUnitId(u), u.sistema || getUnitTipo(u), u.compliance, 'truck')).join('')
+                : `<div class="p-8 text-center text-slate-400 font-bold">No hay unidades registradas.</div>`
+            }
+          </div>
+        </div>
+
+        <div class="card-brand">
+          <h3 class="font-black text-xl tracking-tight uppercase mb-6">Tripulación con menor cumplimiento</h3>
+          <div class="space-y-4">
+            ${
+              criticalCrew.length
+                ? criticalCrew.map(c => renderEntitySummary(getCrewName(c), getCrewRole(c), c.compliance, 'user')).join('')
+                : `<div class="p-8 text-center text-slate-400 font-bold">No hay tripulantes registrados.</div>`
+            }
+          </div>
+        </div>
+      </section>
+
+    </div>
+  `;
 
   refreshIcons();
+}
+
+function getOperationalStatusMeta(status) {
+  const estado = String(status || '').toUpperCase();
+
+  if (estado === 'APTO') {
+    return {
+      label: 'Proveedor apto',
+      message: 'Tu documentación obligatoria se encuentra vigente y aprobada.',
+      badge: 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/20'
+    };
+  }
+
+  if (estado === 'NO_APTO') {
+    return {
+      label: 'Proveedor no apto',
+      message: 'Tienes documentos faltantes, vencidos o rechazados que impiden completar el cumplimiento.',
+      badge: 'bg-red-500/15 text-red-300 border border-red-400/20'
+    };
+  }
+
+  if (estado === 'OBSERVADO') {
+    return {
+      label: 'Proveedor observado',
+      message: 'Existen documentos por corregir, renovar o completar para alcanzar el cumplimiento total.',
+      badge: 'bg-amber-500/15 text-amber-300 border border-amber-400/20'
+    };
+  }
+
+  return {
+    label: 'Sin requisitos configurados',
+    message: 'Aún no existen requisitos activos para evaluar el cumplimiento.',
+    badge: 'bg-slate-500/15 text-slate-300 border border-slate-400/20'
+  };
+}
+
+function renderMiniKpi(label, value) {
+  return `
+    <div class="p-4 bg-white/5 border border-white/10 rounded-2xl">
+      <p class="text-2xl font-black text-white">${escapeHtml(value)}</p>
+      <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1">${escapeHtml(label)}</p>
+    </div>
+  `;
+}
+
+function renderDashboardKpi(label, value, icon) {
+  return `
+    <div class="card-brand p-6">
+      <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[#E20613] mb-6">
+        <i data-lucide="${icon}" size="22"></i>
+      </div>
+      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${escapeHtml(label)}</p>
+      <h3 class="text-4xl font-black text-slate-900 tracking-tight mt-1">${escapeHtml(value)}</h3>
+    </div>
+  `;
+}
+
+function renderRequiredAction(item) {
+  const status = getStatusMeta(item.estado);
+  const action = item.accion || getActionLabelByStatus(item.estado);
+
+  return `
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-5 p-5 bg-slate-50 rounded-[28px] border border-slate-100">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#E20613] border border-slate-100">
+          <i data-lucide="file-text" size="22"></i>
+        </div>
+
+        <div>
+          <div class="flex flex-wrap items-center gap-2 mb-1">
+            <h4 class="font-black text-slate-900 uppercase">${escapeHtml(item.nombre_documento)}</h4>
+            <span class="${status.badge} px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest">
+              ${escapeHtml(item.estado)}
+            </span>
+          </div>
+
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            ${escapeHtml(item.tipo_nexo || item.entityType)} · ${escapeHtml(item.entityId || item.nexo_id)}
+          </p>
+
+          <p class="text-xs text-slate-400 mt-1">
+            Vence: ${escapeHtml(item.fecha_vencimiento || 'N/A')}
+          </p>
+        </div>
+      </div>
+
+      <button type="button"
+        onclick="openUpload('${escapeHtml(item.entityId || item.nexo_id)}', '${escapeHtml(item.nombre_documento)}', '${escapeHtml(item.entityType || item.tipo_nexo)}', '${escapeHtml(item.requisito_id || '')}')"
+        class="px-5 py-3 rounded-2xl bg-[#E20613] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510]">
+        ${escapeHtml(action)}
+      </button>
+    </div>
+  `;
+}
+
+function renderEntitySummary(title, subtitle, compliance, icon) {
+  const pct = clampPercent(compliance);
+
+  return `
+    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-300 border border-slate-100">
+          <i data-lucide="${icon}" size="20"></i>
+        </div>
+        <div>
+          <p class="font-black text-slate-900">${escapeHtml(title)}</p>
+          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${escapeHtml(subtitle || '-')}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+          <div class="h-full bg-[#E20613]" style="width: ${pct}%"></div>
+        </div>
+        <p class="text-sm font-black text-slate-900">${pct}%</p>
+      </div>
+    </div>
+  `;
+}
+
+function getStatusMeta(status) {
+  const estado = String(status || '').toUpperCase();
+
+  if (estado === 'VIGENTE') return { badge: 'bg-emerald-50 text-emerald-600 border border-emerald-100' };
+  if (estado === 'POR_VENCER') return { badge: 'bg-amber-50 text-amber-600 border border-amber-100' };
+  if (estado === 'FALTANTE') return { badge: 'bg-red-50 text-red-600 border border-red-100' };
+  if (estado === 'VENCIDO') return { badge: 'bg-red-50 text-red-700 border border-red-100' };
+  if (estado === 'OBSERVADO') return { badge: 'bg-orange-50 text-orange-600 border border-orange-100' };
+  if (estado === 'RECHAZADO') return { badge: 'bg-red-100 text-red-700 border border-red-200' };
+  if (estado === 'PENDIENTE_VALIDACION') return { badge: 'bg-blue-50 text-blue-600 border border-blue-100' };
+
+  return { badge: 'bg-slate-50 text-slate-500 border border-slate-100' };
+}
+
+function getActionLabelByStatus(status) {
+  const estado = String(status || '').toUpperCase();
+
+  if (estado === 'FALTANTE') return 'SUBIR';
+  if (estado === 'VENCIDO') return 'REEMPLAZAR';
+  if (estado === 'OBSERVADO') return 'CORREGIR';
+  if (estado === 'RECHAZADO') return 'CORREGIR';
+  if (estado === 'POR_VENCER') return 'RENOVAR';
+
+  return 'REVISAR';
 }
 
 function renderStatBlock(id, label, val, color, sub, trend = '') {

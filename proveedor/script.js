@@ -680,13 +680,13 @@ function renderFleet() {
   let html = units.map(u => `
     <tr class="hover:bg-slate-50/50 transition-all">
       
-      <td class="px-6 py-6">
+      <td class="px-4 py-5">
         <div>
           <p class="font-black text-slate-900">${escapeHtml(getUnitId(u))}</p>
         </div>
       </td>
 
-      <td class="px-6 py-6">
+      <td class="px-4 py-5">
         <div class="space-y-1">
           <p class="text-xs font-black text-slate-900">
             ${escapeHtml(u.sistema || '-')}
@@ -697,7 +697,7 @@ function renderFleet() {
         </div>
       </td>
 
-      <td class="px-6 py-6">
+      <td class="px-4 py-5">
         <div class="space-y-1">
           <p class="text-xs font-black text-slate-900">
             ${escapeHtml(u.marca || '-')}
@@ -708,7 +708,7 @@ function renderFleet() {
         </div>
       </td>
 
-      <td class="px-6 py-6">
+      <td class="px-4 py-5">
         <div class="space-y-1">
           <p class="text-xs font-black text-slate-900">
             ${escapeHtml(u.año || u.anio || '-')}
@@ -719,27 +719,27 @@ function renderFleet() {
         </div>
       </td>
 
-      <td class="px-6 py-6">
+      <td class="px-4 py-5">
         <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[9px] font-black uppercase tracking-widest">
           ${escapeHtml(u.linea_exclusiva || 'NO_EXCLUSIVA')}
         </span>
       </td>
 
-      <td class="px-6 py-6">
+      <td class="px-4 py-5">
         <span class="text-xs font-bold text-slate-700">
           ${escapeHtml(u.telefono || '-')}
         </span>
       </td>
 
-      <td class="px-6 py-6">
+      <td class="px-4 py-5">
         <span class="text-xs font-bold text-slate-700">
           ${escapeHtml(u.poliza || '-')}
         </span>
       </td>
 
-      <td class="px-6 py-6">
+      <td class="px-4 py-5">
         <div class="flex items-center gap-4">
-          <div class="flex-1 w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div class="flex-1 w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div class="h-full bg-emerald-500" style="width: ${clampPercent(u.compliance)}%"></div>
           </div>
           <span class="text-sm font-black text-slate-900">
@@ -748,7 +748,7 @@ function renderFleet() {
         </div>
       </td>
 
-      <td class="px-6 py-6 text-right">
+      <td class="px-4 py-5 text-right">
         <button onclick="toggleDropdown(event, '${escapeHtml(getUnitId(u))}')" class="btn-action-trigger">
           <i data-lucide="more-vertical" size="18"></i>
         </button>
@@ -759,7 +759,7 @@ function renderFleet() {
 
   html += `
     <tr class="hover:bg-slate-50/50 transition-all group">
-      <td class="px-6 py-6">
+      <td class="px-4 py-5">
         <button onclick="openUnitModal()" class="btn-primary whitespace-nowrap shadow-sm hover:translate-y-[-2px]">
           <i data-lucide="plus" size="18"></i>
           Registrar Unidad
@@ -954,11 +954,11 @@ function renderDocsTableHead(type) {
     return `
       <thead class="bg-slate-50 border-b border-slate-100">
         <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-          <th class="px-6 py-5">Placa</th>
-          <th class="px-6 py-5">Documento</th>
-          <th class="px-6 py-5">Estado</th>
-          <th class="px-6 py-5">Vence</th>
-          <th class="px-6 py-5 text-right">Acción</th>
+          <th class="px-4 py-5">Placa</th>
+          <th class="px-4 py-5">Documento</th>
+          <th class="px-4 py-5">Estado</th>
+          <th class="px-4 py-5">Vence</th>
+          <th class="px-4 py-5 text-right">Acción</th>
         </tr>
       </thead>
     `;
@@ -968,12 +968,12 @@ function renderDocsTableHead(type) {
     return `
       <thead class="bg-slate-50 border-b border-slate-100">
         <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-          <th class="px-6 py-5">DNI</th>
-          <th class="px-6 py-5">Nombre completo</th>
-          <th class="px-6 py-5">Documento</th>
-          <th class="px-6 py-5">Estado</th>
-          <th class="px-6 py-5">Vence</th>
-          <th class="px-6 py-5 text-right">Acción</th>
+          <th class="px-4 py-5">DNI</th>
+          <th class="px-4 py-5">Nombre completo</th>
+          <th class="px-4 py-5">Documento</th>
+          <th class="px-4 py-5">Estado</th>
+          <th class="px-4 py-5">Vence</th>
+          <th class="px-4 py-5 text-right">Acción</th>
         </tr>
       </thead>
     `;
@@ -983,10 +983,10 @@ function renderDocsTableHead(type) {
     return `
       <thead class="bg-slate-50 border-b border-slate-100">
         <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-          <th class="px-6 py-5">Documento</th>
-          <th class="px-6 py-5">Estado</th>
-          <th class="px-6 py-5">Vence</th>
-          <th class="px-6 py-5 text-right">Acción</th>
+          <th class="px-4 py-5">Documento</th>
+          <th class="px-4 py-5">Estado</th>
+          <th class="px-4 py-5">Vence</th>
+          <th class="px-4 py-5 text-right">Acción</th>
         </tr>
       </thead>
     `;
@@ -995,11 +995,11 @@ function renderDocsTableHead(type) {
   return `
     <thead class="bg-slate-50 border-b border-slate-100">
       <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-        <th class="px-6 py-5">Documento</th>
-        <th class="px-6 py-5">Pertenece a</th>
-        <th class="px-6 py-5">Estado</th>
-        <th class="px-6 py-5">Vence</th>
-        <th class="px-6 py-5 text-right">Acción</th>
+        <th class="px-4 py-5">Documento</th>
+        <th class="px-4 py-5">Pertenece a</th>
+        <th class="px-4 py-5">Estado</th>
+        <th class="px-4 py-5">Vence</th>
+        <th class="px-4 py-5 text-right">Acción</th>
       </tr>
     </thead>
   `;
@@ -1013,11 +1013,11 @@ function renderDocsTableRow(doc, type) {
   if (type === 'unidad') {
     return `
       <tr class="hover:bg-slate-50/50 transition-all">
-        <td class="px-6 py-5 font-black text-slate-900">${escapeHtml(doc.entityId)}</td>
-        <td class="px-6 py-5">${renderDocNameCell(doc)}</td>
-        <td class="px-6 py-5">${renderDocStatusBadge(doc.status, status)}</td>
-        <td class="px-6 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
-        <td class="px-6 py-5 text-right">${actionButton}</td>
+        <td class="px-4 py-5 font-black text-slate-900">${escapeHtml(doc.entityId)}</td>
+        <td class="px-4 py-5">${renderDocNameCell(doc)}</td>
+        <td class="px-4 py-5">${renderDocStatusBadge(doc.status, status)}</td>
+        <td class="px-4 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
+        <td class="px-4 py-5 text-right">${actionButton}</td>
       </tr>
     `;
   }
@@ -1027,12 +1027,12 @@ function renderDocsTableRow(doc, type) {
 
     return `
       <tr class="hover:bg-slate-50/50 transition-all">
-        <td class="px-6 py-5 font-black text-slate-900">${escapeHtml(doc.entityId)}</td>
-        <td class="px-6 py-5 font-bold text-slate-700">${escapeHtml(person?.nombre || '-')}</td>
-        <td class="px-6 py-5">${renderDocNameCell(doc)}</td>
-        <td class="px-6 py-5">${renderDocStatusBadge(doc.status, status)}</td>
-        <td class="px-6 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
-        <td class="px-6 py-5 text-right">${actionButton}</td>
+        <td class="px-4 py-5 font-black text-slate-900">${escapeHtml(doc.entityId)}</td>
+        <td class="px-4 py-5 font-bold text-slate-700">${escapeHtml(person?.nombre || '-')}</td>
+        <td class="px-4 py-5">${renderDocNameCell(doc)}</td>
+        <td class="px-4 py-5">${renderDocStatusBadge(doc.status, status)}</td>
+        <td class="px-4 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
+        <td class="px-4 py-5 text-right">${actionButton}</td>
       </tr>
     `;
   }
@@ -1040,24 +1040,24 @@ function renderDocsTableRow(doc, type) {
   if (type === 'empresa') {
     return `
       <tr class="hover:bg-slate-50/50 transition-all">
-        <td class="px-6 py-5">${renderDocNameCell(doc)}</td>
-        <td class="px-6 py-5">${renderDocStatusBadge(doc.status, status)}</td>
-        <td class="px-6 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
-        <td class="px-6 py-5 text-right">${actionButton}</td>
+        <td class="px-4 py-5">${renderDocNameCell(doc)}</td>
+        <td class="px-4 py-5">${renderDocStatusBadge(doc.status, status)}</td>
+        <td class="px-4 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
+        <td class="px-4 py-5 text-right">${actionButton}</td>
       </tr>
     `;
   }
 
   return `
     <tr class="hover:bg-slate-50/50 transition-all">
-      <td class="px-6 py-5">${renderDocNameCell(doc)}</td>
-      <td class="px-6 py-5">
+      <td class="px-4 py-5">${renderDocNameCell(doc)}</td>
+      <td class="px-4 py-5">
         <p class="font-black text-slate-900">${escapeHtml(getDocOwnerLabel(doc))}</p>
         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${escapeHtml(doc.entityType)}</p>
       </td>
-      <td class="px-6 py-5">${renderDocStatusBadge(doc.status, status)}</td>
-      <td class="px-6 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
-      <td class="px-6 py-5 text-right">${actionButton}</td>
+      <td class="px-4 py-5">${renderDocStatusBadge(doc.status, status)}</td>
+      <td class="px-4 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
+      <td class="px-4 py-5 text-right">${actionButton}</td>
     </tr>
   `;
 }

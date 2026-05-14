@@ -680,10 +680,10 @@ function renderFleet() {
   let html = units.map(u => `
     <tr class="hover:bg-slate-50/50 transition-all">
       
-      <td class="px-4 py-5">
-        <div>
-          <p class="font-black text-slate-900">${escapeHtml(getUnitId(u))}</p>
-        </div>
+      <td class="px-4 py-5 w-[140px] whitespace-nowrap">
+        <p class="text-lg font-black text-slate-900 tracking-tight">
+          ${escapeHtml(getUnitId(u))}
+        </p>
       </td>
 
       <td class="px-4 py-5">
@@ -704,17 +704,6 @@ function renderFleet() {
           </p>
           <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
             ${escapeHtml(u.modelo || '-')}
-          </p>
-        </div>
-      </td>
-
-      <td class="px-4 py-5">
-        <div class="space-y-1">
-          <p class="text-xs font-black text-slate-900">
-            ${escapeHtml(u.año || u.anio || '-')}
-          </p>
-          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            ${escapeHtml(u.capacidad || '-')}
           </p>
         </div>
       </td>
@@ -766,7 +755,7 @@ function renderFleet() {
         </button>
       </td>
 
-      <td colspan="8"></td>
+      <td colspan="7"></td>
     </tr>
   `;
 

@@ -806,40 +806,213 @@ function renderDocs() {
     ? state.data.docs
     : state.data.docs.filter(d => d.entityType === state.filterType);
 
-  grid.innerHTML = docs.length
-    ? docs.map(d => `
-        <div class="card-brand flex flex-col group hover:border-red-100">
-          <div class="flex justify-between items-start mb-6">
-            <div class="p-4 bg-slate-50 rounded-2xl text-slate-300 group-hover:text-[#E20613] transition-all">
-              <i data-lucide="file-text" size="24"></i>
-            </div>
-            <span class="px-3 py-1 rounded-full border border-orange-100 bg-orange-50 text-orange-600 text-[9px] font-black uppercase tracking-widest">${escapeHtml(d.status)}</span>
-          </div>
+  if (!docs.length) {
+    grid.className = 'grid grid-cols-1';
+    grid.innerHTML = `
+      <div class="card-brand p-10 text-center text-slate-400 font-bold">
+        No hay documentos para mostrar.
+      </div>
+    `;
+    return;
+  }
 
-          <div class="flex-1 space-y-1.5">
-            <h4 class="text-xl font-black text-slate-900 tracking-tight leading-tight">${escapeHtml(d.type)}</h4>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${escapeHtml(d.entityId)}</p>
-          </div>
+  grid.className = 'block';
 
-          <div class="mt-10 space-y-4">
-            <div class="flex items-center gap-3 text-slate-400">
-              <i data-lucide="clock" size="14"></i>
-              <p class="text-xs font-medium">Vence: <span class="font-bold text-slate-700">${escapeHtml(d.expiryDate || 'N/A')}</span></p>
-            </div>
-            <div class="flex gap-2">
-              <button onclick="${d.fileUrl ? `window.open('${escapeHtml(d.fileUrl)}', '_blank')` : `alert('No hay archivo aprobado disponible.')`}" class="flex-1 py-3 border border-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">
-                BAJAR
-              </button>
-              <button onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}', '${escapeHtml(d.entityType)}', '${escapeHtml(d.requisito_id || '')}')" class="flex-1 py-3 bg-[#E20613] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510] shadow-lg shadow-red-100">
-                SUBIR
-              </button>
-            </div>
-          </div>
-        </div>
-      `).join('')
-    : `<div class="col-span-3 p-8 text-center text-slate-400 font-bold">No hay documentos registrados.</div>`;
+  grid.innerHTML = `
+    <div class="card-brand p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          ${renderDocsTableHead(state.filterType)}
+          <tbody class="divide-y divide-slate-50">
+            ${docs.map(doc => renderDocsTableRow(doc, state.filterType)).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
 
   refreshIcons();
+}
+
+function renderDocsTableHead(type) {
+  if (type === 'unidad') {
+    return `
+      <thead class="bg-slate-50 border-b border-slate-100">
+        <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+          <th class="px-6 py-5">Placa</th>
+          <th class="px-6 py-5">Documento</th>
+          <th class="px-6 py-5">Estado</th>
+          <th class="px-6 py-5">Vence</th>
+          <th class="px-6 py-5 text-right">Acción</th>
+        </tr>
+      </thead>
+    `;
+  }
+
+  if (type === 'tripulacion') {
+    return `
+      <thead class="bg-slate-50 border-b border-slate-100">
+        <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+          <th class="px-6 py-5">DNI</th>
+          <th class="px-6 py-5">Nombre completo</th>
+          <th class="px-6 py-5">Documento</th>
+          <th class="px-6 py-5">Estado</th>
+          <th class="px-6 py-5">Vence</th>
+          <th class="px-6 py-5 text-right">Acción</th>
+        </tr>
+      </thead>
+    `;
+  }
+
+  if (type === 'empresa') {
+    return `
+      <thead class="bg-slate-50 border-b border-slate-100">
+        <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+          <th class="px-6 py-5">Documento</th>
+          <th class="px-6 py-5">Estado</th>
+          <th class="px-6 py-5">Vence</th>
+          <th class="px-6 py-5 text-right">Acción</th>
+        </tr>
+      </thead>
+    `;
+  }
+
+  return `
+    <thead class="bg-slate-50 border-b border-slate-100">
+      <tr class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+        <th class="px-6 py-5">Documento</th>
+        <th class="px-6 py-5">Pertenece a</th>
+        <th class="px-6 py-5">Estado</th>
+        <th class="px-6 py-5">Vence</th>
+        <th class="px-6 py-5 text-right">Acción</th>
+      </tr>
+    </thead>
+  `;
+}
+
+function renderDocsTableRow(doc, type) {
+  const status = getStatusMeta(doc.status);
+  const actionLabel = getActionLabelByStatus(doc.status);
+  const actionButton = renderDocumentActionButton(doc, actionLabel);
+
+  if (type === 'unidad') {
+    return `
+      <tr class="hover:bg-slate-50/50 transition-all">
+        <td class="px-6 py-5 font-black text-slate-900">${escapeHtml(doc.entityId)}</td>
+        <td class="px-6 py-5">${renderDocNameCell(doc)}</td>
+        <td class="px-6 py-5">${renderDocStatusBadge(doc.status, status)}</td>
+        <td class="px-6 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
+        <td class="px-6 py-5 text-right">${actionButton}</td>
+      </tr>
+    `;
+  }
+
+  if (type === 'tripulacion') {
+    const person = getCrewByDoc(doc);
+
+    return `
+      <tr class="hover:bg-slate-50/50 transition-all">
+        <td class="px-6 py-5 font-black text-slate-900">${escapeHtml(doc.entityId)}</td>
+        <td class="px-6 py-5 font-bold text-slate-700">${escapeHtml(person?.nombre || '-')}</td>
+        <td class="px-6 py-5">${renderDocNameCell(doc)}</td>
+        <td class="px-6 py-5">${renderDocStatusBadge(doc.status, status)}</td>
+        <td class="px-6 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
+        <td class="px-6 py-5 text-right">${actionButton}</td>
+      </tr>
+    `;
+  }
+
+  if (type === 'empresa') {
+    return `
+      <tr class="hover:bg-slate-50/50 transition-all">
+        <td class="px-6 py-5">${renderDocNameCell(doc)}</td>
+        <td class="px-6 py-5">${renderDocStatusBadge(doc.status, status)}</td>
+        <td class="px-6 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
+        <td class="px-6 py-5 text-right">${actionButton}</td>
+      </tr>
+    `;
+  }
+
+  return `
+    <tr class="hover:bg-slate-50/50 transition-all">
+      <td class="px-6 py-5">${renderDocNameCell(doc)}</td>
+      <td class="px-6 py-5">
+        <p class="font-black text-slate-900">${escapeHtml(getDocOwnerLabel(doc))}</p>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${escapeHtml(doc.entityType)}</p>
+      </td>
+      <td class="px-6 py-5">${renderDocStatusBadge(doc.status, status)}</td>
+      <td class="px-6 py-5 text-sm font-bold text-slate-500">${escapeHtml(doc.expiryDate || 'N/A')}</td>
+      <td class="px-6 py-5 text-right">${actionButton}</td>
+    </tr>
+  `;
+}
+
+function renderDocNameCell(doc) {
+  return `
+    <div>
+      <p class="font-black text-slate-900 uppercase">${escapeHtml(doc.type || doc.nombre_documento)}</p>
+      <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${escapeHtml(doc.grupo_documental || 'GENERAL')}</p>
+    </div>
+  `;
+}
+
+function renderDocStatusBadge(status, meta) {
+  return `
+    <span class="${meta.badge} px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
+      ${escapeHtml(status || '-')}
+    </span>
+  `;
+}
+
+function renderDocumentActionButton(doc, actionLabel) {
+  const estado = String(doc.status || '').toUpperCase();
+
+  if (estado === 'VIGENTE' && doc.fileUrl) {
+    return `
+      <button type="button"
+        onclick="window.open('${escapeHtml(doc.fileUrl)}', '_blank')"
+        class="px-4 py-3 rounded-2xl bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100">
+        VER
+      </button>
+    `;
+  }
+
+  if (estado === 'PENDIENTE_VALIDACION') {
+    return `
+      <span class="px-4 py-3 rounded-2xl bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest">
+        EN VALIDACIÓN
+      </span>
+    `;
+  }
+
+  return `
+    <button type="button"
+      onclick="openUpload('${escapeHtml(doc.entityId)}', '${escapeHtml(doc.type)}', '${escapeHtml(doc.entityType)}', '${escapeHtml(doc.requisito_id || '')}')"
+      class="px-4 py-3 rounded-2xl bg-[#E20613] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510]">
+      ${escapeHtml(actionLabel)}
+    </button>
+  `;
+}
+
+function getCrewByDoc(doc) {
+  return (state.data.crew || []).find(person =>
+    String(person.id || person.dni) === String(doc.entityId)
+  );
+}
+
+function getDocOwnerLabel(doc) {
+  if (doc.entityType === 'unidad') return doc.entityId;
+
+  if (doc.entityType === 'tripulacion') {
+    const person = getCrewByDoc(doc);
+    return person?.nombre || doc.entityId;
+  }
+
+  if (doc.entityType === 'empresa') {
+    return state.user?.razon_social || state.data.empresa?.razon_social || 'Empresa';
+  }
+
+  return doc.entityId || '-';
 }
 
 function renderCompany() {

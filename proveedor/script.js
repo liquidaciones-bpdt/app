@@ -678,52 +678,119 @@ function renderFleet() {
   const units = state.data.units || [];
 
   let html = units.map(u => `
-    <tr class="hover:bg-slate-50/50 transition-all">
-      <td class="px-8 py-6 font-black text-slate-900">${escapeHtml(getUnitId(u))}</td>
-      <td class="px-8 py-6">
-        <div class="space-y-1">
-          <p class="text-xs font-bold text-slate-600">${escapeHtml(u.sistema || '-')}</p>
-          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${escapeHtml(getUnitTipo(u))}</p>
+    <tr class="hover:bg-slate-50/50 transition-all align-top">
+
+      <td class="px-6 py-6">
+        <div>
+          <p class="font-black text-slate-900 uppercase">
+            ${escapeHtml(getUnitId(u))}
+          </p>
+
+          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+            ${escapeHtml(u.sistema || '-')}
+          </p>
         </div>
       </td>
-      <td class="px-8 py-6">
+
+      <td class="px-6 py-6">
+        <div class="space-y-1">
+          <p class="text-sm font-black text-slate-800">
+            ${escapeHtml(u.marca || '-')}
+          </p>
+
+          <p class="text-[11px] text-slate-500 font-bold">
+            ${escapeHtml(u.modelo || '-')}
+          </p>
+        </div>
+      </td>
+
+      <td class="px-6 py-6">
+        <div class="space-y-1">
+          <p class="text-sm font-black text-slate-800">
+            ${escapeHtml(u.año || u.anio || '-')}
+          </p>
+
+          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+            ${escapeHtml(getUnitTipo(u))}
+          </p>
+        </div>
+      </td>
+
+      <td class="px-6 py-6">
+        <span class="
+          px-3 py-1 rounded-full text-[9px]
+          font-black uppercase tracking-widest
+          ${u.linea_exclusiva !== 'NO_EXCLUSIVA'
+            ? 'bg-blue-50 text-blue-600 border border-blue-100'
+            : 'bg-slate-50 text-slate-500 border border-slate-100'}
+        ">
+          ${escapeHtml(u.linea_exclusiva || 'NO_EXCLUSIVA')}
+        </span>
+      </td>
+
+      <td class="px-6 py-6">
+        <p class="text-sm font-bold text-slate-700">
+          ${escapeHtml(u.telefono || '-')}
+        </p>
+      </td>
+
+      <td class="px-6 py-6">
+        <p class="text-sm font-black text-slate-800">
+          ${escapeHtml(u.poliza || '-')}
+        </p>
+      </td>
+
+      <td class="px-6 py-6">
         <div class="flex items-center gap-2 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
           <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
           ${escapeHtml(u.estado || 'ACTIVO')}
         </div>
       </td>
-      <td class="px-8 py-6">
+
+      <td class="px-6 py-6">
         <div class="flex items-center gap-4">
           <div class="flex-1 w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div class="h-full bg-emerald-500" style="width: ${clampPercent(u.compliance)}%"></div>
+            <div
+              class="h-full bg-emerald-500"
+              style="width:${clampPercent(u.compliance)}%">
+            </div>
           </div>
-          <span class="text-sm font-black text-slate-900">${clampPercent(u.compliance)}%</span>
+
+          <span class="text-sm font-black text-slate-900">
+            ${clampPercent(u.compliance)}%
+          </span>
         </div>
       </td>
-      <td class="px-8 py-6 text-right">
-        <button onclick="toggleDropdown(event, '${escapeHtml(getUnitId(u))}')" class="btn-action-trigger">
+
+      <td class="px-6 py-6 text-right">
+        <button
+          onclick="toggleDropdown(event, '${escapeHtml(getUnitId(u))}')"
+          class="btn-action-trigger">
           <i data-lucide="more-vertical" size="18"></i>
         </button>
       </td>
+
     </tr>
   `).join('');
 
   html += `
-    <tr class="hover:bg-slate-50/50 transition-all group">
-      <td class="px-8 py-6">
-        <button onclick="openUnitModal()" class="btn-primary whitespace-nowrap shadow-sm hover:translate-y-[-2px]">
+    <tr class="hover:bg-slate-50/50 transition-all">
+      <td class="px-6 py-6">
+        <button
+          onclick="openUnitModal()"
+          class="btn-primary whitespace-nowrap shadow-sm hover:translate-y-[-2px]">
+
           <i data-lucide="plus" size="18"></i>
           Registrar Unidad
         </button>
       </td>
-      <td class="px-8 py-6"></td>
-      <td class="px-8 py-6"></td>
-      <td class="px-8 py-6"></td>
-      <td class="px-8 py-6"></td>
+
+      <td colspan="8"></td>
     </tr>
   `;
 
   tbody.innerHTML = html;
+
   refreshIcons();
 }
 
@@ -1305,13 +1372,27 @@ function openUpload(id, type, entityType = '', requisitoId = '') {
   }
 
   const fileInput = document.getElementById('upload-file');
-  const fileLabel = document.getElementById('upload-file-label');
-  const expiryInput = document.getElementById('upload-expiry');
-  const expiryWrapper = expiryInput?.closest('.space-y-2');
+const fileLabel = document.getElementById('upload-file-label');
+const expiryInput = document.getElementById('upload-expiry');
+const expiryWrapper = expiryInput?.closest('.space-y-2');
 
-  if (fileInput) fileInput.value = '';
-  if (fileLabel) fileLabel.innerText = 'Seleccionar o Arrastrar Archivo';
-  if (expiryInput) expiryInput.value = '';
+const polizaWrapper = document.getElementById('upload-poliza-wrapper');
+const polizaInput = document.getElementById('upload-poliza');
+
+if (fileInput) fileInput.value = '';
+if (fileLabel) fileLabel.innerText = 'Seleccionar o Arrastrar Archivo';
+if (expiryInput) expiryInput.value = '';
+if (polizaInput) polizaInput.value = '';
+
+const isSoat = String(type || '').trim().toUpperCase() === 'SOAT';
+
+if (polizaWrapper) {
+  if (isSoat && String(finalEntityType || '').toLowerCase() === 'unidad') {
+    polizaWrapper.classList.remove('hidden');
+  } else {
+    polizaWrapper.classList.add('hidden');
+  }
+}
 
   if (doc && String(doc.requiere_vencimiento || '').toUpperCase() === 'NO') {
     if (expiryWrapper) expiryWrapper.classList.add('hidden');
@@ -1345,6 +1426,7 @@ function fileToBase64(file) {
 async function handleUploadDocument() {
   const fileInput = document.getElementById('upload-file');
   const expiryInput = document.getElementById('upload-expiry');
+  const polizaInput = document.getElementById('upload-poliza');
 
   const file = fileInput?.files?.[0];
 
@@ -1391,22 +1473,32 @@ async function handleUploadDocument() {
     return;
   }
 
+  const isSoatUpload =
+  String(state.activeDocType || '').trim().toUpperCase() === 'SOAT' &&
+  String(state.activeDocEntityType || '').toLowerCase() === 'unidad';
+
+if (isSoatUpload && !polizaInput?.value.trim()) {
+  alert('Ingrese el número de póliza SOAT.');
+  return;
+}
+
   setLoading(true, 'Subiendo documento...');
 
   try {
     const fileBase64 = await fileToBase64(file);
 
     const payload = {
-      user: state.user,
-      requisito_id: state.activeRequirementId || '',
-      nombre_documento: state.activeDocType,
-      nexo_id: state.activeDocEntityId,
-      tipo_nexo: String(state.activeDocEntityType || '').toUpperCase(),
-      fileBase64,
-      fileName: file.name,
-      mimeType: file.type || 'application/pdf',
-      fecha_vencimiento: expiryInput?.value || ''
-    };
+  user: state.user,
+  requisito_id: state.activeRequirementId || '',
+  nombre_documento: state.activeDocType,
+  nexo_id: state.activeDocEntityId,
+  tipo_nexo: String(state.activeDocEntityType || '').toUpperCase(),
+  fileBase64,
+  fileName: file.name,
+  mimeType: file.type || 'application/pdf',
+  fecha_vencimiento: expiryInput?.value || '',
+  poliza: isSoatUpload ? polizaInput?.value.trim() : ''
+};
 
     const res = await api.call('uploadDocument', payload);
 

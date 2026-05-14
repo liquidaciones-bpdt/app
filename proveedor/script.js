@@ -678,38 +678,19 @@ function renderFleet() {
   const units = state.data.units || [];
 
   let html = units.map(u => `
-    <tr class="hover:bg-slate-50/50 transition-all align-top">
-
+    <tr class="hover:bg-slate-50/50 transition-all">
+      
       <td class="px-6 py-6">
         <div>
-          <p class="font-black text-slate-900 uppercase">
-            ${escapeHtml(getUnitId(u))}
-          </p>
+          <p class="font-black text-slate-900">${escapeHtml(getUnitId(u))}</p>
+        </div>
+      </td>
 
-          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+      <td class="px-6 py-6">
+        <div class="space-y-1">
+          <p class="text-xs font-black text-slate-900">
             ${escapeHtml(u.sistema || '-')}
           </p>
-        </div>
-      </td>
-
-      <td class="px-6 py-6">
-        <div class="space-y-1">
-          <p class="text-sm font-black text-slate-800">
-            ${escapeHtml(u.marca || '-')}
-          </p>
-
-          <p class="text-[11px] text-slate-500 font-bold">
-            ${escapeHtml(u.modelo || '-')}
-          </p>
-        </div>
-      </td>
-
-      <td class="px-6 py-6">
-        <div class="space-y-1">
-          <p class="text-sm font-black text-slate-800">
-            ${escapeHtml(u.año || u.anio || '-')}
-          </p>
-
           <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
             ${escapeHtml(getUnitTipo(u))}
           </p>
@@ -717,45 +698,50 @@ function renderFleet() {
       </td>
 
       <td class="px-6 py-6">
-        <span class="
-          px-3 py-1 rounded-full text-[9px]
-          font-black uppercase tracking-widest
-          ${u.linea_exclusiva !== 'NO_EXCLUSIVA'
-            ? 'bg-blue-50 text-blue-600 border border-blue-100'
-            : 'bg-slate-50 text-slate-500 border border-slate-100'}
-        ">
+        <div class="space-y-1">
+          <p class="text-xs font-black text-slate-900">
+            ${escapeHtml(u.marca || '-')}
+          </p>
+          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+            ${escapeHtml(u.modelo || '-')}
+          </p>
+        </div>
+      </td>
+
+      <td class="px-6 py-6">
+        <div class="space-y-1">
+          <p class="text-xs font-black text-slate-900">
+            ${escapeHtml(u.año || u.anio || '-')}
+          </p>
+          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+            ${escapeHtml(u.capacidad || '-')}
+          </p>
+        </div>
+      </td>
+
+      <td class="px-6 py-6">
+        <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[9px] font-black uppercase tracking-widest">
           ${escapeHtml(u.linea_exclusiva || 'NO_EXCLUSIVA')}
         </span>
       </td>
 
       <td class="px-6 py-6">
-        <p class="text-sm font-bold text-slate-700">
+        <span class="text-xs font-bold text-slate-700">
           ${escapeHtml(u.telefono || '-')}
-        </p>
+        </span>
       </td>
 
       <td class="px-6 py-6">
-        <p class="text-sm font-black text-slate-800">
+        <span class="text-xs font-bold text-slate-700">
           ${escapeHtml(u.poliza || '-')}
-        </p>
-      </td>
-
-      <td class="px-6 py-6">
-        <div class="flex items-center gap-2 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
-          <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-          ${escapeHtml(u.estado || 'ACTIVO')}
-        </div>
+        </span>
       </td>
 
       <td class="px-6 py-6">
         <div class="flex items-center gap-4">
           <div class="flex-1 w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              class="h-full bg-emerald-500"
-              style="width:${clampPercent(u.compliance)}%">
-            </div>
+            <div class="h-full bg-emerald-500" style="width: ${clampPercent(u.compliance)}%"></div>
           </div>
-
           <span class="text-sm font-black text-slate-900">
             ${clampPercent(u.compliance)}%
           </span>
@@ -763,9 +749,7 @@ function renderFleet() {
       </td>
 
       <td class="px-6 py-6 text-right">
-        <button
-          onclick="toggleDropdown(event, '${escapeHtml(getUnitId(u))}')"
-          class="btn-action-trigger">
+        <button onclick="toggleDropdown(event, '${escapeHtml(getUnitId(u))}')" class="btn-action-trigger">
           <i data-lucide="more-vertical" size="18"></i>
         </button>
       </td>
@@ -774,12 +758,9 @@ function renderFleet() {
   `).join('');
 
   html += `
-    <tr class="hover:bg-slate-50/50 transition-all">
+    <tr class="hover:bg-slate-50/50 transition-all group">
       <td class="px-6 py-6">
-        <button
-          onclick="openUnitModal()"
-          class="btn-primary whitespace-nowrap shadow-sm hover:translate-y-[-2px]">
-
+        <button onclick="openUnitModal()" class="btn-primary whitespace-nowrap shadow-sm hover:translate-y-[-2px]">
           <i data-lucide="plus" size="18"></i>
           Registrar Unidad
         </button>

@@ -240,48 +240,9 @@
 
       <div id="view-dashboard" class="view-section active space-y-12">
 
-        <div id="expired-alert" class="bg-red-50 border border-red-100 p-8 rounded-[40px] items-center gap-6 shadow-xl shadow-red-100/50 hidden">
-          <div class="w-16 h-16 bg-[#E20613] rounded-3xl flex items-center justify-center text-white shrink-0">
-            <i data-lucide="alert-circle" size="32"></i>
+        <div class="card-brand p-10 text-center text-slate-400 font-bold">
+            Sincronizando dashboard...
           </div>
-          <div class="flex-1">
-            <h4 class="text-xl font-black text-red-900 tracking-tight">Acción requerida</h4>
-            <p id="expired-text" class="text-red-700 font-medium"></p>
-          </div>
-          <button type="button" onclick="switchTab('docs')" class="btn-primary py-3 px-6 shadow-sm">Revisar Ahora</button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div class="card-brand flex flex-col justify-center items-center text-center py-10 border-[#E20613]/10">
-            <div class="relative w-32 h-32 mb-4">
-              <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="transparent" stroke="#F1F5F9" stroke-width="10"></circle>
-                <circle id="compliance-ring" cx="50" cy="50" r="42" fill="transparent" stroke="#E20613" stroke-width="10" stroke-dasharray="263.89" stroke-dashoffset="263.89" stroke-linecap="round" class="transition-all duration-1000"></circle>
-              </svg>
-              <div class="absolute inset-0 flex items-center justify-center">
-                <span id="compliance-val" class="text-3xl font-black text-slate-900">0%</span>
-              </div>
-            </div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Cumplimiento Global</p>
-          </div>
-
-          <div class="card-brand py-6 flex flex-col justify-between" id="stat-flota"></div>
-          <div class="card-brand py-6 flex flex-col justify-between" id="stat-trip"></div>
-          <div class="card-brand py-6 flex flex-col justify-between" id="stat-empresa"></div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div class="card-brand">
-            <h3 class="font-black text-xl tracking-tight uppercase mb-6">Resumen Flota</h3>
-            <div id="fleet-summary-list" class="space-y-4"></div>
-          </div>
-
-          <div class="card-brand">
-            <h3 class="font-black text-xl tracking-tight uppercase mb-6">Revisión Tripulantes</h3>
-            <div id="crew-summary-list" class="space-y-4"></div>
-          </div>
-        </div>
-      </div>
 
       <div id="view-fleet" class="view-section space-y-8">
         <div class="card-brand p-0 overflow-hidden">

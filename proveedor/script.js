@@ -1,6 +1,6 @@
 import CONFIG from './config.js';
 
-const SESSION_KEY = 'htbpdt_asistente_session_v3';
+const SESSION_KEY = 'htbpdt_proveedor_session_v3';
 const REQUEST_TIMEOUT_MS = 25000;
 
 const state = {
@@ -182,7 +182,7 @@ async function handleLogin(event) {
     const user = await api.call('login', {
       dni,
       pass,
-      portal: 'ASISTENTE'
+      portal: 'PROVEEDOR'
     });
 
     state.user = user;

@@ -17,6 +17,7 @@ const state = {
     acciones_requeridas: []
   },
   filterType: 'all',
+  filterStatus: 'all',
   activeDocId: null,
   activeDocType: null,
   activeDocEntityId: null,
@@ -802,23 +803,36 @@ function renderDocs() {
   const grid = document.getElementById('docs-grid');
   if (!grid) return;
 
-  const docs = state.filterType === 'all'
-    ? state.data.docs
-    : state.data.docs.filter(d => d.entityType === state.filterType);
+  let docs = state.filterType === 'all'
+  ? state.data.docs
+  : state.data.docs.filter(d => d.entityType === state.filterType);
+
+if (state.filterStatus !== 'all') {
+  docs = docs.filter(d =>
+    String(d.status || '').toUpperCase() === String(state.filterStatus || '').toUpperCase()
+  );
+}
 
   if (!docs.length) {
-    grid.className = 'grid grid-cols-1';
-    grid.innerHTML = `
+  grid.className = 'block';
+  grid.innerHTML = `
+    <div class="space-y-5">
+      ${renderDocsStatusFilters()}
+
       <div class="card-brand p-10 text-center text-slate-400 font-bold">
         No hay documentos para mostrar.
       </div>
-    `;
-    return;
-  }
+    </div>
+  `;
+  return;
+}
 
   grid.className = 'block';
 
   grid.innerHTML = `
+  <div class="space-y-5">
+    ${renderDocsStatusFilters()}
+
     <div class="card-brand p-0 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left">
@@ -829,9 +843,62 @@ function renderDocs() {
         </table>
       </div>
     </div>
-  `;
+  </div>
+`;
 
   refreshIcons();
+}
+
+function renderDocsStatusFilters() {
+  const filters = [
+    ['all', 'Todos'],
+    ['FALTANTE', 'Faltantes'],
+    ['OBSERVADO', 'Observados'],
+    ['RECHAZADO', 'Rechazados'],
+    ['VENCIDO', 'Vencidos'],
+    ['POR_VENCER', 'Por vencer'],
+    ['PENDIENTE_VALIDACION', 'En validación'],
+    ['VIGENTE', 'Vigentes']
+  ];
+
+  return `
+    <div class="flex flex-wrap gap-3">
+      ${filters.map(([status, label]) => {
+        const active = state.filterStatus === status;
+
+        return `
+          <button type="button"
+            data-doc-status="${status}"
+            onclick="filterDocsStatus('${status}')"
+            class="doc-status-filter-btn px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+              active
+                ? 'bg-[#E20613] text-white shadow-xl border-transparent'
+                : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'
+            }">
+            ${label}
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function filterDocsStatus(status) {
+  state.filterStatus = status;
+
+  document.querySelectorAll('.doc-status-filter-btn').forEach(btn => {
+    btn.classList.add('bg-white', 'text-slate-500', 'border-slate-100');
+    btn.classList.remove('bg-[#E20613]', 'text-white', 'shadow-xl');
+  });
+
+  const target = document.querySelector(`[data-doc-status="${status}"]`);
+
+  if (target) {
+    target.classList.remove('bg-white', 'text-slate-500', 'border-slate-100');
+    target.classList.add('bg-[#E20613]', 'text-white', 'shadow-xl');
+  }
+
+  renderDocs();
 }
 
 function renderDocsTableHead(type) {
@@ -1539,6 +1606,7 @@ window.handleLogin = handleLogin;
 window.logout = logout;
 window.refreshData = refreshData;
 window.filterDocs = filterDocs;
+window.filterDocsStatus = filterDocsStatus;
 window.openUpload = openUpload;
 window.closeUpload = closeUpload;
 window.openUnitModal = openUnitModal;

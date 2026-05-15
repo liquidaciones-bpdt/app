@@ -1425,6 +1425,9 @@ function openUnitModal(id = null) {
     document.getElementById('form-unit-capacidad').value = unit.capacidad || '';
     document.getElementById('form-unit-poliza').value = unit.poliza || '';
 
+    const estadoInput = document.getElementById('form-unit-estado');
+    if (estadoInput) estadoInput.value = unit.estado || 'ACTIVO';
+
     const lineaValue = unit.linea || unit.linea_exclusiva || '';
     const isExclusiva = lineaValue && lineaValue !== 'NO_EXCLUSIVA';
     document.getElementById('form-unit-exclusiva').checked = isExclusiva;
@@ -1435,6 +1438,8 @@ function openUnitModal(id = null) {
     if (title) title.innerText = 'Registrar Unidad';
     if (modeInput) modeInput.value = 'create';
     placaInput.readOnly = false;
+    const estadoInput = document.getElementById('form-unit-estado');
+    if (estadoInput) estadoInput.value = 'ACTIVO';
   }
 
   modal.classList.remove('hidden');
@@ -1493,9 +1498,7 @@ const currentUnit = state.data.units.find(u => getUnitId(u) === placa);
   linea_exclusiva: document.getElementById('form-unit-exclusiva')?.checked
   ? document.getElementById('form-unit-linea')?.value.trim()
   : 'NO_EXCLUSIVA',
-  estado: mode === 'edit'
-    ? (currentUnit?.estado || 'ACTIVO')
-    : 'ACTIVO'
+  estado: document.getElementById('form-unit-estado')?.value || 'ACTIVO'
 };
 
   setLoading(true, mode === 'edit' ? 'Actualizando unidad...' : 'Registrando unidad...');

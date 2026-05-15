@@ -914,12 +914,20 @@ const crew = (state.data.crew || []).filter(c => {
                 </span>
               </div>
 
-              <button type="button"
-                onclick="viewCrewDetails('${escapeHtml(c.id || c.dni)}')"
-                class="text-[11px] font-black text-[#E20613] hover:underline uppercase tracking-widest">
-                Gestionar documentos
-              </button>
-            </div>
+              <div class="flex items-center gap-4">
+                <button type="button"
+                  onclick="openCrewModal('${escapeHtml(c.id || c.dni)}')"
+                  class="text-[11px] font-black text-slate-400 hover:text-slate-700 hover:underline uppercase tracking-widest">
+                  Actualizar
+                </button>
+              
+                <button type="button"
+                  onclick="viewCrewDetails('${escapeHtml(c.id || c.dni)}')"
+                  class="text-[11px] font-black text-[#E20613] hover:underline uppercase tracking-widest">
+                  Gestionar documentos
+                </button>
+              </div>
+              </div>
 
           </div>
         `;
@@ -1352,7 +1360,7 @@ async function handleUnitSubmit(e) {
   ? document.getElementById('form-unit-linea')?.value.trim()
   : 'NO_EXCLUSIVA',
   estado: 'ACTIVO'
-};;
+};
 
   setLoading(true, mode === 'edit' ? 'Actualizando unidad...' : 'Registrando unidad...');
 
@@ -1372,10 +1380,13 @@ async function handleUnitSubmit(e) {
   }
 }
 
-function openCrewModal() {
+function openCrewModal(id = null) {
   const modal = document.getElementById('crew-modal');
   const form = document.getElementById('crew-form');
   const placaSelect = document.getElementById('form-crew-placa');
+  const modeInput = document.getElementById('crew-form-mode');
+  const title = document.getElementById('crew-modal-title');
+  const dniInput = document.getElementById('form-crew-dni');
 
   if (!modal || !form) {
     console.error('Falta #crew-modal o #crew-form en index.html.');
@@ -1383,6 +1394,10 @@ function openCrewModal() {
   }
 
   form.reset();
+
+  if (modeInput) {
+    modeInput.value = id ? 'edit' : 'create';
+  }
 
   if (placaSelect) {
     placaSelect.innerHTML = '<option value="">Sin asignar</option>';
@@ -1395,6 +1410,44 @@ function openCrewModal() {
     });
   }
 
+  if (id) {
+    const person = (state.data.crew || []).find(c =>
+      String(c.id || c.dni) === String(id)
+    );
+
+    if (!person) {
+      alert('Tripulante no encontrado.');
+      return;
+    }
+
+    if (title) title.innerText = 'Actualizar Tripulante';
+
+    if (dniInput) {
+      dniInput.value = person.dni || person.id || '';
+      dniInput.readOnly = true;
+      dniInput.classList.add('bg-slate-50', 'text-slate-400');
+    }
+
+    const nombresInput = document.getElementById('form-crew-nombres');
+    const apellidosInput = document.getElementById('form-crew-apellidos');
+    const cargoInput = document.getElementById('form-crew-cargo');
+    const placaInput = document.getElementById('form-crew-placa');
+
+    if (nombresInput) nombresInput.value = person.nombres || '';
+    if (apellidosInput) apellidosInput.value = person.apellidos || '';
+    if (cargoInput) cargoInput.value = person.cargo || person.rol || '';
+    if (placaInput) placaInput.value = person.placa || '';
+
+  } else {
+    if (title) title.innerText = 'Registrar Tripulante';
+
+    if (dniInput) {
+      dniInput.value = '';
+      dniInput.readOnly = false;
+      dniInput.classList.remove('bg-slate-50', 'text-slate-400');
+    }
+  }
+
   modal.classList.remove('hidden');
   modal.classList.add('flex');
 
@@ -1402,12 +1455,34 @@ function openCrewModal() {
 }
 
 function closeCrewModal() {
-  document.getElementById('crew-modal')?.classList.add('hidden');
-  document.getElementById('crew-modal')?.classList.remove('flex');
+  const modal = document.getElementById('crew-modal');
+  const dniInput = document.getElementById('form-crew-dni');
+  const modeInput = document.getElementById('crew-form-mode');
+  const title = document.getElementById('crew-modal-title');
+
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  if (dniInput) {
+    dniInput.readOnly = false;
+    dniInput.classList.remove('bg-slate-50', 'text-slate-400');
+  }
+
+  if (modeInput) {
+    modeInput.value = 'create';
+  }
+
+  if (title) {
+    title.innerText = 'Registrar Tripulante';
+  }
 }
 
 async function handleCrewSubmit(event) {
   event.preventDefault();
+
+  const mode = document.getElementById('crew-form-mode')?.value || 'create';
 
   const payload = {
     user: state.user,
@@ -1424,18 +1499,33 @@ async function handleCrewSubmit(event) {
     return;
   }
 
-  setLoading(true, 'Registrando tripulante...');
+  setLoading(
+    true,
+    mode === 'edit'
+      ? 'Actualizando tripulante...'
+      : 'Registrando tripulante...'
+  );
 
   try {
-    const res = await api.call('createCrew', payload);
+    const action = mode === 'edit'
+      ? 'updateCrew'
+      : 'createCrew';
+
+    const res = await api.call(action, payload);
 
     closeCrewModal();
-    await reloadData();
 
-    alert(res?.message || 'Tripulante registrado correctamente.');
+    await reloadData(true);
+
+    alert(
+      res?.message ||
+      (mode === 'edit'
+        ? 'Tripulante actualizado correctamente.'
+        : 'Tripulante registrado correctamente.')
+    );
 
   } catch (error) {
-    alert(error.message || 'Error registrando tripulante.');
+    alert(error.message || 'Error guardando tripulante.');
   } finally {
     setLoading(false);
   }

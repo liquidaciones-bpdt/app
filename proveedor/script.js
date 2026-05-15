@@ -130,6 +130,38 @@ function refreshIcons() {
   if (window.lucide) lucide.createIcons();
 }
 
+function showLoginScreen() {
+  const loginModal = document.getElementById('login-modal');
+  const appContainer = document.getElementById('app-container');
+
+  if (appContainer) {
+    appContainer.classList.add('hidden');
+  }
+
+  if (loginModal) {
+    loginModal.classList.remove('hidden');
+    loginModal.classList.add('flex');
+  }
+
+  document.body.classList.add('overflow-hidden');
+}
+
+function showAppScreen() {
+  const loginModal = document.getElementById('login-modal');
+  const appContainer = document.getElementById('app-container');
+
+  if (loginModal) {
+    loginModal.classList.add('hidden');
+    loginModal.classList.remove('flex');
+  }
+
+  if (appContainer) {
+    appContainer.classList.remove('hidden');
+  }
+
+  document.body.classList.remove('overflow-hidden');
+}
+
 function switchTab(tabId) {
   state.activeTab = tabId;
 
@@ -192,17 +224,16 @@ async function handleLogin(event) {
     state.user = user;
     localStorage.setItem(SESSION_KEY, JSON.stringify(user));
 
-    document.getElementById('login-modal')?.classList.add('hidden');
-    document.getElementById('app-container')?.classList.remove('hidden');
-    document.body.classList.remove('overflow-hidden');
+    showAppScreen();
 
     setUserHeader(user);
-
-    await reloadData();
+    
+    await reloadData(true);
 
   } catch (error) {
     localStorage.removeItem(SESSION_KEY);
     state.user = null;
+    showLoginScreen();
     alert(error.message || 'Error conectando al sistema.');
   } finally {
     hideLoader();
@@ -260,8 +291,7 @@ async function refreshData(silent = false, force = false) {
   if (state.refreshing) return;
 
   if (!state.user) {
-    document.getElementById('login-modal')?.classList.remove('hidden');
-    document.getElementById('app-container')?.classList.add('hidden');
+    showLoginScreen();
     return;
   }
 
@@ -1818,44 +1848,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   refreshIcons();
 
   const uploadFile = document.getElementById('upload-file');
-if (uploadFile) {
-  uploadFile.addEventListener('change', () => {
-    const label = document.getElementById('upload-file-label');
-    if (label) {
-      label.innerText = uploadFile.files?.[0]?.name || 'Seleccionar o Arrastrar Archivo';
-    }
-  });
-}
-  const crewSearch = document.getElementById('crew-search');
 
-if (crewSearch) {
-  crewSearch.addEventListener('input', () => {
-    renderCrew();
-  });
-}
-  
-  if (state.user) {
-  document.getElementById('login-modal')?.classList.add('hidden');
-  document.getElementById('login-modal')?.classList.remove('flex');
+  if (uploadFile) {
+    uploadFile.addEventListener('change', () => {
+      const label = document.getElementById('upload-file-label');
 
-  document.getElementById('app-container')?.classList.remove('hidden');
-
-  setUserHeader(state.user);
-
-  renderTab();
-
-  try {
-    await reloadData();
-  } catch (error) {
-    console.error(error);
+      if (label) {
+        label.innerText =
+          uploadFile.files?.[0]?.name ||
+          'Seleccionar o Arrastrar Archivo';
+      }
+    });
   }
 
-} else {
-  document.getElementById('app-container')?.classList.add('hidden');
+  const crewSearch = document.getElementById('crew-search');
 
-  document.getElementById('login-modal')?.classList.remove('hidden');
-  document.getElementById('login-modal')?.classList.add('flex');
-}
+  if (crewSearch) {
+    crewSearch.addEventListener('input', () => {
+      renderCrew();
+    });
+  }
+
+  if (state.user) {
+    showAppScreen();
+
+    setUserHeader(state.user);
+
+    try {
+      await reloadData(true);
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'Error actualizando datos.');
+    }
+
+  } else {
+    showLoginScreen();
+  }
 });
 
 window.switchTab = switchTab;

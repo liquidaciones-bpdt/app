@@ -982,18 +982,6 @@ function toggleCrewDropdown(event, crewId) {
       <i data-lucide="folder-open" size="16"></i>
       Gestionar documentos
     </button>
-
-    <div class="h-px bg-slate-100 my-2"></div>
-
-    <button type="button" onclick="handleCrewDropdownAction('activate')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-50 text-left text-sm font-bold text-emerald-700 ${!isInactive ? 'opacity-50 pointer-events-none' : ''}">
-      <i data-lucide="badge-check" size="16"></i>
-      Marcar Activo
-    </button>
-
-    <button type="button" onclick="handleCrewDropdownAction('deactivate')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-rose-50 text-left text-sm font-bold text-rose-700 ${isInactive ? 'opacity-50 pointer-events-none' : ''}">
-      <i data-lucide="user-x" size="16"></i>
-      Marcar Inactivo
-    </button>
   `;
 
   document.body.appendChild(menu);
@@ -1029,51 +1017,8 @@ async function handleCrewDropdownAction(action) {
   }
 
   if (action === 'docs') {
-  viewCrewDetails(crewId);
-  return;
-}
-
-  if (action === 'activate') {
-    await changeCrewStatus(crew, 'ACTIVO');
+    viewCrewDetails(crewId);
     return;
-  }
-
-  if (action === 'deactivate') {
-    await changeCrewStatus(crew, 'INACTIVO');
-    return;
-  }
-}
-
-async function changeCrewStatus(crew, estado) {
-  const confirmText =
-    estado === 'INACTIVO'
-      ? `¿Desea marcar como INACTIVO a ${getCrewName(crew)}?`
-      : `¿Desea marcar como ACTIVO a ${getCrewName(crew)}?`;
-
-  if (!confirm(confirmText)) return;
-
-  setLoading(true, estado === 'INACTIVO' ? 'Desactivando tripulante...' : 'Activando tripulante...');
-
-  try {
-    const payload = {
-      user: state.user,
-      dni: crew.dni || crew.id,
-      nombres: crew.nombres || '',
-      apellidos: crew.apellidos || '',
-      cargo: crew.cargo || crew.rol || '',
-      placa: crew.placa || '',
-      estado
-    };
-
-    const res = await api.call('updateCrew', payload);
-
-    await reloadData(true);
-
-    alert(res?.message || `Tripulante marcado como ${estado}.`);
-  } catch (error) {
-    alert(error.message || 'No se pudo actualizar el estado del tripulante.');
-  } finally {
-    setLoading(false);
   }
 }
 
@@ -1577,6 +1522,9 @@ function openCrewModal(id = null) {
     if (cargoInput) cargoInput.value = person.cargo || person.rol || '';
     if (placaInput) placaInput.value = person.placa || '';
 
+    const estadoInput = document.getElementById('form-crew-estado');
+    if (estadoInput) estadoInput.value = person.estado || 'ACTIVO';
+
   } else {
     if (title) title.innerText = 'Registrar Tripulante';
 
@@ -1585,6 +1533,8 @@ function openCrewModal(id = null) {
       dniInput.readOnly = false;
       dniInput.classList.remove('bg-slate-50', 'text-slate-400');
     }
+    const estadoInput = document.getElementById('form-crew-estado');
+    if (estadoInput) estadoInput.value = 'ACTIVO';
   }
 
   modal.classList.remove('hidden');
@@ -1631,10 +1581,8 @@ async function handleCrewSubmit(event) {
     cargo: document.getElementById('form-crew-cargo')?.value.trim(),
     placa: document.getElementById('form-crew-placa')?.value.trim(),
     estado: mode === 'edit'
-  ? ((state.data.crew || []).find(c =>
-      String(c.id || c.dni) === String(document.getElementById('form-crew-dni')?.value.trim())
-    )?.estado || 'ACTIVO')
-  : 'ACTIVO'
+      ? document.getElementById('form-crew-estado')?.value || 'ACTIVO'
+      : 'ACTIVO'
   };
 
   if (!payload.dni || !payload.nombres || !payload.apellidos || !payload.cargo) {

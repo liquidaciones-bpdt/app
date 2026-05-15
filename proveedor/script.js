@@ -1836,7 +1836,10 @@ if (crewSearch) {
   
   if (state.user) {
   document.getElementById('login-modal')?.classList.add('hidden');
+  document.getElementById('login-modal')?.classList.remove('flex');
+
   document.getElementById('app-container')?.classList.remove('hidden');
+
   setUserHeader(state.user);
 
   renderTab();
@@ -1846,6 +1849,12 @@ if (crewSearch) {
   } catch (error) {
     console.error(error);
   }
+
+} else {
+  document.getElementById('app-container')?.classList.add('hidden');
+
+  document.getElementById('login-modal')?.classList.remove('hidden');
+  document.getElementById('login-modal')?.classList.add('flex');
 }
 });
 

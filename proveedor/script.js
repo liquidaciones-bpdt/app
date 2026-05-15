@@ -815,16 +815,44 @@ function renderCrew() {
   const grid = document.getElementById('crew-grid');
   if (!grid) return;
 
-  const crew = state.data.crew || [];
+  const search = document.getElementById('crew-search')?.value.trim().toLowerCase() || '';
+
+const crew = (state.data.crew || []).filter(c => {
+  const text = [
+    c.dni,
+    c.id,
+    getCrewName(c),
+    getCrewRole(c),
+    c.placa,
+    c.estado
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  return !search || text.includes(search);
+});
 
   grid.innerHTML = crew.length
     ? crew.map(c => {
         const compliance = clampPercent(c.compliance || 0);
         const placa = c.placa || 'SIN ASIGNAR';
-        const pendingCount = Number(c.pendingCount || c.pendientes || 0);
-        const observedCount = Number(c.observedCount || c.observados || 0);
-        const expiredCount = Number(c.expiredCount || c.vencidos || 0);
         const isInactive = String(c.estado || '').toUpperCase() === 'INACTIVO';
+        const crewId = c.id || c.dni;
+
+        const docs = (state.data.docs || []).filter(d =>
+          String(d.entityType).toLowerCase() === 'tripulacion' &&
+          String(d.entityId) === String(crewId)
+        );
+        
+        const pendingCount = docs.filter(d =>
+          ['FALTANTE', 'PENDIENTE_VALIDACION'].includes(String(d.status || '').toUpperCase())
+        ).length;
+        
+        const observedCount = docs.filter(d =>
+          String(d.status || '').toUpperCase() === 'OBSERVADO'
+        ).length;
+        
+        const expiredCount = docs.filter(d =>
+          String(d.status || '').toUpperCase() === 'VENCIDO'
+        ).length;
 
         return `
           <div class="p-6 bg-white rounded-[36px] border border-slate-100 shadow-xl shadow-slate-100/50 group hover:border-red-100 transition-all ${isInactive ? 'opacity-70' : ''}">
@@ -1001,11 +1029,9 @@ async function handleCrewDropdownAction(action) {
   }
 
   if (action === 'docs') {
-    switchTab('docs');
-    state.filterType = 'crew';
-    renderDocs();
-    return;
-  }
+  viewCrewDetails(crewId);
+  return;
+}
 
   if (action === 'activate') {
     await changeCrewStatus(crew, 'ACTIVO');
@@ -1597,7 +1623,11 @@ async function handleCrewSubmit(event) {
     apellidos: document.getElementById('form-crew-apellidos')?.value.trim(),
     cargo: document.getElementById('form-crew-cargo')?.value.trim(),
     placa: document.getElementById('form-crew-placa')?.value.trim(),
-    estado: 'ACTIVO'
+    estado: mode === 'edit'
+  ? ((state.data.crew || []).find(c =>
+      String(c.id || c.dni) === String(document.getElementById('form-crew-dni')?.value.trim())
+    )?.estado || 'ACTIVO')
+  : 'ACTIVO'
   };
 
   if (!payload.dni || !payload.nombres || !payload.apellidos || !payload.cargo) {

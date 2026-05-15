@@ -25,7 +25,9 @@ const state = {
   activeDocEntityId: null,
   activeDocEntityType: null,
   activeRequirementId: null,
-  refreshing: false
+  refreshing: false,
+  activeCrewId: null,
+  activeCrewMenuOpen: false
 };
 
 function getStoredSession() {
@@ -813,122 +815,96 @@ function renderCrew() {
   const grid = document.getElementById('crew-grid');
   if (!grid) return;
 
-  const search = document.getElementById('crew-search')?.value.trim().toLowerCase() || '';
-
-const crew = (state.data.crew || []).filter(c => {
-  const text = [
-    c.dni,
-    c.id,
-    getCrewName(c),
-    getCrewRole(c),
-    c.placa
-  ].filter(Boolean).join(' ').toLowerCase();
-
-  return !search || text.includes(search);
-});
+  const crew = state.data.crew || [];
 
   grid.innerHTML = crew.length
     ? crew.map(c => {
-        const docs = (state.data.docs || []).filter(d =>
-          String(d.entityType).toLowerCase() === 'tripulacion' &&
-          String(d.entityId) === String(c.id || c.dni)
-        );
-
-        const pendientes = docs.filter(d =>
-          ['FALTANTE', 'PENDIENTE_VALIDACION'].includes(String(d.status || '').toUpperCase())
-        ).length;
-
-        const observados = docs.filter(d =>
-          String(d.status || '').toUpperCase() === 'OBSERVADO'
-        ).length;
-
-        const vencidos = docs.filter(d =>
-          String(d.status || '').toUpperCase() === 'VENCIDO'
-        ).length;
+        const compliance = clampPercent(c.compliance || 0);
+        const placa = c.placa || 'SIN ASIGNAR';
+        const pendingCount = Number(c.pendingCount || c.pendientes || 0);
+        const observedCount = Number(c.observedCount || c.observados || 0);
+        const expiredCount = Number(c.expiredCount || c.vencidos || 0);
+        const isInactive = String(c.estado || '').toUpperCase() === 'INACTIVO';
 
         return `
-          <div class="p-7 bg-white rounded-[36px] border border-slate-100 shadow-xl shadow-slate-100/50 group hover:border-red-100 transition-all">
+          <div class="p-6 bg-white rounded-[36px] border border-slate-100 shadow-xl shadow-slate-100/50 group hover:border-red-100 transition-all ${isInactive ? 'opacity-70' : ''}">
             
-            <div class="flex items-start justify-between mb-7">
-              <div class="flex items-center gap-4">
-                <div class="w-14 h-14 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-[#E20613] group-hover:border-red-100 transition-all">
-                  <i data-lucide="user" size="24"></i>
+            <div class="flex items-start justify-between gap-4 mb-5">
+              <div class="flex items-start gap-4 min-w-0">
+                <div class="w-16 h-16 bg-slate-50 border border-red-100 rounded-2xl flex items-center justify-center text-[#E20613] shrink-0">
+                  <i data-lucide="user" size="26"></i>
                 </div>
 
-                <div>
-                  <h4 class="font-black text-slate-900 leading-tight uppercase">
+                <div class="min-w-0">
+                  <h4 class="font-black text-slate-900 leading-tight uppercase text-[15px] break-words">
                     ${escapeHtml(getCrewName(c))}
                   </h4>
-                  <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+
+                  <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-1">
                     DNI: ${escapeHtml(c.dni || c.id || '-')}
                   </p>
-                  <p class="text-[10px] font-black text-[#E20613] uppercase tracking-widest mt-1">
+
+                  <p class="text-[12px] font-black text-[#E20613] uppercase tracking-widest mt-2">
                     ${escapeHtml(getCrewRole(c))}
+                  </p>
+
+                  <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                    ${escapeHtml(placa)}
                   </p>
                 </div>
               </div>
+
+              <div class="relative shrink-0">
+                <button
+                  type="button"
+                  onclick="toggleCrewDropdown(event, '${escapeHtml(c.dni || c.id)}')"
+                  class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:bg-slate-50 hover:text-slate-500 transition-all"
+                >
+                  <i data-lucide="more-vertical" size="18"></i>
+                </button>
+              </div>
             </div>
 
-            <div class="mb-6 p-4 bg-slate-50 rounded-2xl">
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                Placa asignada
-              </p>
-              <p class="text-sm font-black text-slate-800">
-                ${escapeHtml(c.placa || 'SIN ASIGNAR')}
-              </p>
-            </div>
-
-            <div class="space-y-4">
-              <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <div class="space-y-3 mb-5">
+              <div class="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest text-slate-400">
                 <span>Cumplimiento</span>
-                <span class="text-slate-900">${clampPercent(c.compliance)}%</span>
+                <span class="text-slate-900">${compliance}%</span>
               </div>
 
               <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div class="h-full bg-[#E20613]" style="width: ${clampPercent(c.compliance)}%"></div>
+                <div class="h-full bg-[#E20613]" style="width: ${compliance}%"></div>
               </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-3 mt-6">
-              <div class="p-3 bg-slate-50 rounded-2xl text-center">
-                <p class="text-lg font-black text-slate-900">${pendientes}</p>
-                <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pend.</p>
+            <div class="grid grid-cols-3 gap-3 mb-5">
+              <div class="rounded-[22px] bg-slate-50 p-4 text-center">
+                <p class="text-3xl font-black text-slate-900 leading-none">${pendingCount}</p>
+                <p class="mt-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Pend.</p>
               </div>
 
-              <div class="p-3 bg-orange-50 rounded-2xl text-center">
-                <p class="text-lg font-black text-orange-600">${observados}</p>
-                <p class="text-[8px] font-black text-orange-500 uppercase tracking-widest">Obs.</p>
+              <div class="rounded-[22px] bg-amber-50 p-4 text-center">
+                <p class="text-3xl font-black text-amber-600 leading-none">${observedCount}</p>
+                <p class="mt-2 text-[10px] font-black uppercase tracking-widest text-amber-500">Obs.</p>
               </div>
 
-              <div class="p-3 bg-red-50 rounded-2xl text-center">
-                <p class="text-lg font-black text-red-600">${vencidos}</p>
-                <p class="text-[8px] font-black text-red-500 uppercase tracking-widest">Venc.</p>
+              <div class="rounded-[22px] bg-rose-50 p-4 text-center">
+                <p class="text-3xl font-black text-rose-600 leading-none">${expiredCount}</p>
+                <p class="mt-2 text-[10px] font-black uppercase tracking-widest text-rose-500">Venc.</p>
               </div>
             </div>
 
-            <div class="mt-7 pt-5 border-t border-slate-50 flex items-center justify-between">
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                <span class="text-[9px] font-black text-slate-400 tracking-widest uppercase">
+                <div class="w-2 h-2 ${isInactive ? 'bg-slate-300' : 'bg-emerald-500'} rounded-full"></div>
+                <span class="text-[10px] font-black text-slate-400 tracking-widest uppercase">
                   ${escapeHtml(c.estado || 'ACTIVO')}
                 </span>
               </div>
 
-              <div class="flex items-center gap-4">
-                <button type="button"
-                  onclick="openCrewModal('${escapeHtml(c.id || c.dni)}')"
-                  class="text-[11px] font-black text-slate-400 hover:text-slate-700 hover:underline uppercase tracking-widest">
-                  Actualizar
-                </button>
-              
-                <button type="button"
-                  onclick="viewCrewDetails('${escapeHtml(c.id || c.dni)}')"
-                  class="text-[11px] font-black text-[#E20613] hover:underline uppercase tracking-widest">
-                  Gestionar documentos
-                </button>
-              </div>
-              </div>
-
+              <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                Tripulante
+              </span>
+            </div>
           </div>
         `;
       }).join('')
@@ -943,6 +919,136 @@ const crew = (state.data.crew || []).filter(c => {
     `;
 
   refreshIcons();
+}
+
+function toggleCrewDropdown(event, crewId) {
+  event.stopPropagation();
+
+  closeCrewDropdown();
+
+  const existing = document.getElementById('crew-card-dropdown');
+  if (existing) existing.remove();
+
+  state.activeCrewId = crewId;
+  state.activeCrewMenuOpen = true;
+
+  const crew = (state.data.crew || []).find(c =>
+    String(c.dni || c.id) === String(crewId)
+  );
+
+  if (!crew) return;
+
+  const isInactive = String(crew.estado || '').toUpperCase() === 'INACTIVO';
+
+  const menu = document.createElement('div');
+  menu.id = 'crew-card-dropdown';
+  menu.className = 'fixed z-[9999] w-56 bg-white border border-slate-100 rounded-2xl shadow-2xl shadow-slate-200/50 p-2';
+
+  menu.innerHTML = `
+    <button type="button" onclick="handleCrewDropdownAction('edit')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-left text-sm font-bold text-slate-700">
+      <i data-lucide="pencil" size="16"></i>
+      Actualizar
+    </button>
+
+    <button type="button" onclick="handleCrewDropdownAction('docs')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-left text-sm font-bold text-slate-700">
+      <i data-lucide="folder-open" size="16"></i>
+      Gestionar documentos
+    </button>
+
+    <div class="h-px bg-slate-100 my-2"></div>
+
+    <button type="button" onclick="handleCrewDropdownAction('activate')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-50 text-left text-sm font-bold text-emerald-700 ${!isInactive ? 'opacity-50 pointer-events-none' : ''}">
+      <i data-lucide="badge-check" size="16"></i>
+      Marcar Activo
+    </button>
+
+    <button type="button" onclick="handleCrewDropdownAction('deactivate')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-rose-50 text-left text-sm font-bold text-rose-700 ${isInactive ? 'opacity-50 pointer-events-none' : ''}">
+      <i data-lucide="user-x" size="16"></i>
+      Marcar Inactivo
+    </button>
+  `;
+
+  document.body.appendChild(menu);
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + 8}px`;
+  menu.style.left = `${Math.max(16, rect.right - 224)}px`;
+
+  refreshIcons();
+}
+
+function closeCrewDropdown() {
+  const menu = document.getElementById('crew-card-dropdown');
+  if (menu) menu.remove();
+
+  state.activeCrewId = null;
+  state.activeCrewMenuOpen = false;
+}
+
+async function handleCrewDropdownAction(action) {
+  const crewId = state.activeCrewId;
+  const crew = (state.data.crew || []).find(c =>
+    String(c.dni || c.id) === String(crewId)
+  );
+
+  closeCrewDropdown();
+
+  if (!crew) return;
+
+  if (action === 'edit') {
+    openCrewModal(crewId);
+    return;
+  }
+
+  if (action === 'docs') {
+    switchTab('docs');
+    state.filterType = 'crew';
+    renderDocs();
+    return;
+  }
+
+  if (action === 'activate') {
+    await changeCrewStatus(crew, 'ACTIVO');
+    return;
+  }
+
+  if (action === 'deactivate') {
+    await changeCrewStatus(crew, 'INACTIVO');
+    return;
+  }
+}
+
+async function changeCrewStatus(crew, estado) {
+  const confirmText =
+    estado === 'INACTIVO'
+      ? `¿Desea marcar como INACTIVO a ${getCrewName(crew)}?`
+      : `¿Desea marcar como ACTIVO a ${getCrewName(crew)}?`;
+
+  if (!confirm(confirmText)) return;
+
+  setLoading(true, estado === 'INACTIVO' ? 'Desactivando tripulante...' : 'Activando tripulante...');
+
+  try {
+    const payload = {
+      user: state.user,
+      dni: crew.dni || crew.id,
+      nombres: crew.nombres || '',
+      apellidos: crew.apellidos || '',
+      cargo: crew.cargo || crew.rol || '',
+      placa: crew.placa || '',
+      estado
+    };
+
+    const res = await api.call('updateCrew', payload);
+
+    await reloadData(true);
+
+    alert(res?.message || `Tripulante marcado como ${estado}.`);
+  } catch (error) {
+    alert(error.message || 'No se pudo actualizar el estado del tripulante.');
+  } finally {
+    setLoading(false);
+  }
 }
 
 function filterDocs(type, ev = null) {
@@ -1919,6 +2025,10 @@ window.addEventListener('click', e => {
   if (!e.target.closest('#global-dropdown')) {
     closeDropdown();
   }
+
+  if (!e.target.closest('#crew-card-dropdown')) {
+    closeCrewDropdown();
+  }
 });
 
 window.addEventListener('scroll', () => {
@@ -1996,3 +2106,5 @@ window.handleMenuAction = handleMenuAction;
 window.closeDetailsModal = closeDetailsModal;
 window.viewCrewDetails = viewCrewDetails;
 window.handleUploadDocument = handleUploadDocument;
+window.toggleCrewDropdown = toggleCrewDropdown;
+window.handleCrewDropdownAction = handleCrewDropdownAction;

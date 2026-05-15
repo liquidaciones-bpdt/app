@@ -1607,37 +1607,122 @@ function viewUnitDetails(id) {
   const list = document.getElementById('details-docs-list');
 
   if (list) {
-    if (!docs.length) {
-      list.innerHTML = `
+  if (!docs.length) {
+    list.innerHTML = `
+      <div class="text-center py-12 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-100">
+        <i data-lucide="file-warning" class="mx-auto text-slate-300 mb-4" size="48"></i>
+        <p class="font-bold text-slate-500">No hay documentos configurados para esta unidad.</p>
+      </div>
+    `;
+  } else {
+    list.innerHTML = docs.map(d => renderEntityDocumentItem(d)).join('');
+  }
+}
+
+  document.getElementById('details-modal')?.classList.remove('hidden');
+  document.getElementById('details-modal')?.classList.add('flex');
+
+  refreshIcons();
+}
+
+function viewCrewDetails(id) {
+  const person = state.data.crew.find(c =>
+    String(c.id || c.dni) === String(id)
+  );
+
+  const docs = state.data.docs.filter(d =>
+    String(d.entityType).toLowerCase() === 'tripulacion' &&
+    String(d.entityId) === String(id)
+  );
+
+  if (!person) return;
+
+  const title = document.getElementById('details-modal-title');
+  const subtitle = document.getElementById('details-modal-subtitle');
+  const list = document.getElementById('details-docs-list');
+
+  if (title) title.innerText = `Documentación: ${getCrewName(person)}`;
+  if (subtitle) subtitle.innerText = `DNI ${person.dni || person.id} • ${getCrewRole(person)} • ${person.placa || 'SIN PLACA'}`;
+
+  if (list) {
+    list.innerHTML = docs.length
+      ? docs.map(d => renderEntityDocumentItem(d)).join('')
+      : `
         <div class="text-center py-12 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-100">
           <i data-lucide="file-warning" class="mx-auto text-slate-300 mb-4" size="48"></i>
-          <p class="font-bold text-slate-500">No hay documentos registrados para esta unidad.</p>
+          <p class="font-bold text-slate-500">No hay documentos configurados para este tripulante.</p>
         </div>
       `;
-    } else {
-      list.innerHTML = docs.map(d => `
-        <div class="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-[32px] hover:shadow-lg transition-all group">
-          <div class="flex items-center gap-6">
-            <div class="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
-              <i data-lucide="file-text" size="24"></i>
-            </div>
-            <div>
-              <p class="font-black text-slate-900 leading-none">${escapeHtml(d.type)}</p>
-              <div class="flex items-center gap-2 mt-2">
-                <span class="px-2 py-0.5 bg-amber-50 text-amber-500 rounded text-[8px] font-black uppercase tracking-widest">${escapeHtml(d.status)}</span>
-                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">VENCE: ${escapeHtml(d.expiryDate || 'N/A')}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      `).join('');
-    }
   }
 
   document.getElementById('details-modal')?.classList.remove('hidden');
   document.getElementById('details-modal')?.classList.add('flex');
 
   refreshIcons();
+}
+
+function renderEntityDocumentItem(d) {
+  const status = getStatusMeta(d.status);
+  const actionLabel = getActionLabelByStatus(d.status);
+
+  return `
+    <div class="flex items-center justify-between gap-5 p-5 bg-white border border-slate-100 rounded-[28px] hover:shadow-lg transition-all">
+      <div class="flex items-center gap-5">
+        <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[#E20613] border border-slate-100">
+          <i data-lucide="file-text" size="22"></i>
+        </div>
+
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="font-black text-slate-900 uppercase">${escapeHtml(d.type || d.nombre_documento)}</p>
+            <span class="${status.badge} px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest">
+              ${escapeHtml(d.status)}
+            </span>
+          </div>
+
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+            ${escapeHtml(d.grupo_documental || 'GENERAL')}
+          </p>
+
+          <p class="text-xs text-slate-400 mt-1">
+            Vence: ${escapeHtml(d.expiryDate || 'N/A')}
+          </p>
+        </div>
+      </div>
+
+      ${renderEntityDocumentAction(d, actionLabel)}
+    </div>
+  `;
+}
+
+function renderEntityDocumentAction(d, actionLabel) {
+  const estado = String(d.status || '').toUpperCase();
+
+  if (estado === 'VIGENTE' && d.fileUrl) {
+    return `
+      <button type="button"
+        onclick="window.open('${escapeHtml(d.fileUrl)}', '_blank')"
+        class="px-4 py-3 rounded-2xl bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100">
+        VER
+      </button>
+    `;
+  }
+
+  if (estado === 'PENDIENTE_VALIDACION') {
+    return `
+      <span class="px-4 py-3 rounded-2xl bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest">
+        EN VALIDACIÓN
+      </span>
+    `;
+  }
+
+  return `
+    <button type="button"
+      onclick="openUpload('${escapeHtml(d.entityId)}', '${escapeHtml(d.type)}', '${escapeHtml(d.entityType)}', '${escapeHtml(d.requisito_id || '')}')"
+      class="px-4 py-3 rounded-2xl bg-[#E20613] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#B90510]">
+      ${escapeHtml(actionLabel)}
+    </button>
+  `;
 }
 
 function closeDetailsModal() {
@@ -1743,4 +1828,5 @@ window.handleCrewSubmit = handleCrewSubmit;
 window.toggleDropdown = toggleDropdown;
 window.handleMenuAction = handleMenuAction;
 window.closeDetailsModal = closeDetailsModal;
+window.viewCrewDetails = viewCrewDetails;
 window.handleUploadDocument = handleUploadDocument;

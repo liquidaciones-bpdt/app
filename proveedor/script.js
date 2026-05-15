@@ -1544,12 +1544,15 @@ if (isSoatUpload && !polizaInput?.value.trim()) {
   poliza: isSoatUpload ? polizaInput?.value.trim() : ''
 };
 
-    const res = await api.call('uploadDocument', payload);
-
-    closeUpload();
-    await reloadData();
-
-    alert(res?.message || 'Documento enviado a validación.');
+  const res = await api.call('uploadDocument', payload);
+  
+  closeUpload();
+  
+  alert(res?.message || 'Documento enviado a validación.');
+  
+  setTimeout(() => {
+    refreshData(true);
+  }, 300);
 
   } catch (error) {
     alert(error.message || 'Error subiendo documento.');

@@ -1475,6 +1475,8 @@ async function handleUnitSubmit(e) {
     return;
   }
 
+const currentUnit = state.data.units.find(u => getUnitId(u) === placa);
+
  const payload = {
   user: state.user,
   mode,
@@ -1491,7 +1493,9 @@ async function handleUnitSubmit(e) {
   linea_exclusiva: document.getElementById('form-unit-exclusiva')?.checked
   ? document.getElementById('form-unit-linea')?.value.trim()
   : 'NO_EXCLUSIVA',
-  estado: 'ACTIVO'
+  estado: mode === 'edit'
+    ? (currentUnit?.estado || 'ACTIVO')
+    : 'ACTIVO'
 };
 
   setLoading(true, mode === 'edit' ? 'Actualizando unidad...' : 'Registrando unidad...');

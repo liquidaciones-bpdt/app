@@ -7,6 +7,8 @@ const state = {
   user: getStoredSession(),
   loading: false,
   activeTab: 'dashboard',
+  lastFetchAt: 0,
+  cacheTTL: 60000,
   data: {
     units: [],
     crew: [],
@@ -248,11 +250,11 @@ function logout() {
   }, 900);
 }
 
-async function reloadData() {
-  await refreshData(true);
+async function reloadData(force = true) {
+  await refreshData(true, force);
 }
 
-async function refreshData(silent = false) {
+async function refreshData(silent = false, force = false) {
   const btn = document.getElementById('refresh-btn');
 
   if (state.refreshing) return;
@@ -263,6 +265,17 @@ async function refreshData(silent = false) {
     return;
   }
 
+  const now = Date.now();
+  const hasData =
+    (state.data.units && state.data.units.length) ||
+    (state.data.crew && state.data.crew.length) ||
+    (state.data.docs && state.data.docs.length);
+  
+  if (!force && hasData && now - state.lastFetchAt < state.cacheTTL) {
+    renderTab();
+    return;
+  }
+  
   state.refreshing = true;
 
   try {
@@ -284,6 +297,8 @@ async function refreshData(silent = false) {
       empresa: res.empresa || null,
       acciones_requeridas: res.acciones_requeridas || []
     };
+
+    state.lastFetchAt = Date.now();
 
     if (res.user) {
       state.user = res.user;

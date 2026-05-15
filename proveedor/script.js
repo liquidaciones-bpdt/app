@@ -1820,16 +1820,18 @@ if (crewSearch) {
 }
   
   if (state.user) {
-    document.getElementById('login-modal')?.classList.add('hidden');
-    document.getElementById('app-container')?.classList.remove('hidden');
-    setUserHeader(state.user);
+  document.getElementById('login-modal')?.classList.add('hidden');
+  document.getElementById('app-container')?.classList.remove('hidden');
+  setUserHeader(state.user);
 
-    try {
-      await reloadData();
-    } catch (error) {
-      console.error(error);
-    }
+  renderTab();
+
+  try {
+    await reloadData();
+  } catch (error) {
+    console.error(error);
   }
+}
 });
 
 window.switchTab = switchTab;

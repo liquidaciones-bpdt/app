@@ -1566,7 +1566,7 @@ if (isSoatUpload && !polizaInput?.value.trim()) {
   alert(res?.message || 'Documento enviado a validación.');
   
   setTimeout(() => {
-    refreshData(true);
+    refreshData(true, true);
   }, 300);
 
   } catch (error) {

@@ -768,7 +768,19 @@ function renderCrew() {
   const grid = document.getElementById('crew-grid');
   if (!grid) return;
 
-  const crew = state.data.crew || [];
+  const search = document.getElementById('crew-search')?.value.trim().toLowerCase() || '';
+
+const crew = (state.data.crew || []).filter(c => {
+  const text = [
+    c.dni,
+    c.id,
+    getCrewName(c),
+    getCrewRole(c),
+    c.placa
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  return !search || text.includes(search);
+});
 
   grid.innerHTML = crew.length
     ? crew.map(c => {
@@ -1794,6 +1806,13 @@ if (uploadFile) {
     if (label) {
       label.innerText = uploadFile.files?.[0]?.name || 'Seleccionar o Arrastrar Archivo';
     }
+  });
+}
+  const crewSearch = document.getElementById('crew-search');
+
+if (crewSearch) {
+  crewSearch.addEventListener('input', () => {
+    renderCrew();
   });
 }
   

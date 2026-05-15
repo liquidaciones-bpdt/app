@@ -771,40 +771,102 @@ function renderCrew() {
   const crew = state.data.crew || [];
 
   grid.innerHTML = crew.length
-    ? crew.map(c => `
-        <div class="p-8 bg-white rounded-[40px] border border-slate-100 shadow-xl shadow-slate-100/50 group hover:border-red-100 transition-all">
-          <div class="flex items-start justify-between mb-8">
-            <div class="flex items-center gap-4">
-              <div class="w-14 h-14 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-[#E20613] group-hover:border-red-100 transition-all">
-                <i data-lucide="user" size="24"></i>
-              </div>
-              <div>
-                <h4 class="font-black text-slate-900 leading-tight uppercase">${escapeHtml(getCrewName(c))}</h4>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">${escapeHtml(getCrewRole(c))}</p>
-              </div>
-            </div>
-            <button class="text-slate-200"><i data-lucide="more-vertical" size="18"></i></button>
-          </div>
+    ? crew.map(c => {
+        const docs = (state.data.docs || []).filter(d =>
+          String(d.entityType).toLowerCase() === 'tripulacion' &&
+          String(d.entityId) === String(c.id || c.dni)
+        );
 
-          <div class="space-y-4">
-            <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              <span>Cumplimiento</span>
-              <span class="text-slate-900">${clampPercent(c.compliance)}%</span>
-            </div>
-            <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div class="h-full bg-[#E20613]" style="width: ${clampPercent(c.compliance)}%"></div>
-            </div>
-          </div>
+        const pendientes = docs.filter(d =>
+          ['FALTANTE', 'PENDIENTE_VALIDACION'].includes(String(d.status || '').toUpperCase())
+        ).length;
 
-          <div class="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-              <span class="text-[9px] font-black text-slate-400 tracking-widest uppercase">${escapeHtml(c.estado || 'ACTIVO')}</span>
+        const observados = docs.filter(d =>
+          String(d.status || '').toUpperCase() === 'OBSERVADO'
+        ).length;
+
+        const vencidos = docs.filter(d =>
+          String(d.status || '').toUpperCase() === 'VENCIDO'
+        ).length;
+
+        return `
+          <div class="p-7 bg-white rounded-[36px] border border-slate-100 shadow-xl shadow-slate-100/50 group hover:border-red-100 transition-all">
+            
+            <div class="flex items-start justify-between mb-7">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-[#E20613] group-hover:border-red-100 transition-all">
+                  <i data-lucide="user" size="24"></i>
+                </div>
+
+                <div>
+                  <h4 class="font-black text-slate-900 leading-tight uppercase">
+                    ${escapeHtml(getCrewName(c))}
+                  </h4>
+                  <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                    DNI: ${escapeHtml(c.dni || c.id || '-')}
+                  </p>
+                  <p class="text-[10px] font-black text-[#E20613] uppercase tracking-widest mt-1">
+                    ${escapeHtml(getCrewRole(c))}
+                  </p>
+                </div>
+              </div>
             </div>
-            <button class="text-[11px] font-bold text-[#E20613] hover:underline">Ver Perfil</button>
+
+            <div class="mb-6 p-4 bg-slate-50 rounded-2xl">
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                Placa asignada
+              </p>
+              <p class="text-sm font-black text-slate-800">
+                ${escapeHtml(c.placa || 'SIN ASIGNAR')}
+              </p>
+            </div>
+
+            <div class="space-y-4">
+              <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                <span>Cumplimiento</span>
+                <span class="text-slate-900">${clampPercent(c.compliance)}%</span>
+              </div>
+
+              <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-[#E20613]" style="width: ${clampPercent(c.compliance)}%"></div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mt-6">
+              <div class="p-3 bg-slate-50 rounded-2xl text-center">
+                <p class="text-lg font-black text-slate-900">${pendientes}</p>
+                <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pend.</p>
+              </div>
+
+              <div class="p-3 bg-orange-50 rounded-2xl text-center">
+                <p class="text-lg font-black text-orange-600">${observados}</p>
+                <p class="text-[8px] font-black text-orange-500 uppercase tracking-widest">Obs.</p>
+              </div>
+
+              <div class="p-3 bg-red-50 rounded-2xl text-center">
+                <p class="text-lg font-black text-red-600">${vencidos}</p>
+                <p class="text-[8px] font-black text-red-500 uppercase tracking-widest">Venc.</p>
+              </div>
+            </div>
+
+            <div class="mt-7 pt-5 border-t border-slate-50 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                <span class="text-[9px] font-black text-slate-400 tracking-widest uppercase">
+                  ${escapeHtml(c.estado || 'ACTIVO')}
+                </span>
+              </div>
+
+              <button type="button"
+                onclick="viewCrewDetails('${escapeHtml(c.id || c.dni)}')"
+                class="text-[11px] font-black text-[#E20613] hover:underline uppercase tracking-widest">
+                Gestionar documentos
+              </button>
+            </div>
+
           </div>
-        </div>
-      `).join('')
+        `;
+      }).join('')
     : `
       <div class="col-span-3 flex flex-col items-center justify-center py-20 gap-6">
         <p class="text-slate-400 font-bold">No hay tripulantes registrados.</p>

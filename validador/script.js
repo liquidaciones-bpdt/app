@@ -514,6 +514,34 @@ function renderDashboard() {
       </div>
     </div>
 
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      ${renderOperationalKpi('Empresas aptas', stats.empresasAptas || 0, 'check-circle-2', 'text-emerald-500', 'bg-emerald-50')}
+      ${renderOperationalKpi('Empresas en riesgo', stats.empresasEnRiesgo || 0, 'alert-triangle', 'text-amber-500', 'bg-amber-50')}
+      ${renderOperationalKpi('Empresas no aptas', stats.empresasNoAptas || 0, 'x-circle', 'text-red-500', 'bg-red-50')}
+      ${renderOperationalKpi('Docs. críticos', stats.documentosCriticos || 0, 'file-warning', 'text-orange-500', 'bg-orange-50')}
+    </div>
+
+    <div class="card-brand p-8">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight">
+            Ranking de proveedores por riesgo
+          </h3>
+          <p class="text-sm text-slate-400 font-medium">
+            Empresas con mayor acumulación de documentos pendientes, observados o rechazados.
+          </p>
+        </div>
+      </div>
+    
+      <div class="space-y-4">
+        ${
+          stats.riskRanking && stats.riskRanking.length
+            ? stats.riskRanking.map(renderRiskCompanyRow).join('')
+            : `<div class="p-8 text-center text-slate-400 font-bold">No hay proveedores con riesgo documental.</div>`
+        }
+      </div>
+    </div>
+
     <div class="card-brand p-12">
       <div class="flex justify-between items-center mb-10">
         <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Progreso de Validación</h3>
@@ -578,16 +606,50 @@ function buildDashboardStats() {
 
   const companiesWithDocs = companies.filter(c => c.total > 0).length;
 
-  const avgCompanyCompliance = companies.length
+  const enrichedCompanies = companies.map(company => {
+    const total = Number(company.total || 0);
+    const approved = Number(company.aprobados || 0);
+    const pending = Number(company.pendientes || 0);
+    const observed = Number(company.observados || 0);
+    const rejected = Number(company.rechazados || 0);
+
+    const compliance = total ? Math.round((approved / total) * 100) : 0;
+
+    const riskScore =
+      rejected * 5 +
+      observed * 3 +
+      pending * 2 +
+      (100 - compliance);
+
+    let operationalStatus = 'APTO';
+
+    if (rejected > 0 || compliance < 70) {
+      operationalStatus = 'NO_APTO';
+    } else if (observed > 0 || pending > 0 || compliance < 100) {
+      operationalStatus = 'OBSERVADO';
+    }
+
+    return {
+      ...company,
+      compliance,
+      riskScore,
+      operationalStatus
+    };
+  });
+
+  const empresasAptas = enrichedCompanies.filter(c => c.operationalStatus === 'APTO').length;
+  const empresasEnRiesgo = enrichedCompanies.filter(c => c.operationalStatus === 'OBSERVADO').length;
+  const empresasNoAptas = enrichedCompanies.filter(c => c.operationalStatus === 'NO_APTO').length;
+
+  const avgCompanyCompliance = enrichedCompanies.length
     ? Math.round(
-        companies.reduce((sum, c) => {
-          const approved = Number(c.aprobados || 0);
-          const total = Number(c.total || 0);
-          const pct = total ? (approved / total) * 100 : 0;
-          return sum + pct;
-        }, 0) / companies.length
+        enrichedCompanies.reduce((sum, c) => sum + Number(c.compliance || 0), 0) / enrichedCompanies.length
       )
     : 0;
+
+  const riskRanking = [...enrichedCompanies]
+    .sort((a, b) => Number(b.riskScore || 0) - Number(a.riskScore || 0))
+    .slice(0, 5);
 
   return {
     totalDocs,
@@ -595,14 +657,111 @@ function buildDashboardStats() {
     observados,
     rechazados,
     aprobados,
+
     completedDocs,
     validationProgress,
     pendingPct,
+
     totalCompanies: companies.length,
     companiesWithDocs,
+    empresasAptas,
+    empresasEnRiesgo,
+    empresasNoAptas,
+
+    documentosCriticos: rechazados + observados,
     avgCompanyCompliance,
+
+    riskRanking,
     recentDocs: docs.slice(0, 5)
   };
+}
+
+function renderOperationalKpi(label, value, icon, colorClass, bgClass) {
+  return `
+    <div class="card-brand p-6 flex items-center gap-5">
+      <div class="w-14 h-14 rounded-2xl ${bgClass} ${colorClass} flex items-center justify-center">
+        <i data-lucide="${icon}" style="width: 24px; height: 24px;"></i>
+      </div>
+
+      <div>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          ${escapeHtml(label)}
+        </p>
+        <h3 class="text-3xl font-black text-slate-900 tracking-tight mt-1">
+          ${escapeHtml(value)}
+        </h3>
+      </div>
+    </div>
+  `;
+}
+
+function renderRiskCompanyRow(company) {
+  const status = company.operationalStatus || 'OBSERVADO';
+
+  const meta = {
+    APTO: {
+      label: 'Apto',
+      badge: 'bg-emerald-50 text-emerald-600 border-emerald-100'
+    },
+    OBSERVADO: {
+      label: 'En riesgo',
+      badge: 'bg-amber-50 text-amber-600 border-amber-100'
+    },
+    NO_APTO: {
+      label: 'No apto',
+      badge: 'bg-red-50 text-red-600 border-red-100'
+    }
+  }[status] || {
+    label: status,
+    badge: 'bg-slate-50 text-slate-500 border-slate-100'
+  };
+
+  return `
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-5 p-5 bg-slate-50 rounded-[28px] border border-slate-100">
+      <div>
+        <div class="flex flex-wrap items-center gap-3 mb-2">
+          <h4 class="font-black text-slate-900 uppercase">
+            ${escapeHtml(company.razon_social || company.empresa_ruc)}
+          </h4>
+
+          <span class="${meta.badge} px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest">
+            ${escapeHtml(meta.label)}
+          </span>
+        </div>
+
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          RUC: ${escapeHtml(company.empresa_ruc || '-')}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center min-w-[420px]">
+        <div>
+          <p class="text-lg font-black text-slate-900">${escapeHtml(company.compliance || 0)}%</p>
+          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Cumpl.</p>
+        </div>
+
+        <div>
+          <p class="text-lg font-black text-amber-600">${escapeHtml(company.pendientes || 0)}</p>
+          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pend.</p>
+        </div>
+
+        <div>
+          <p class="text-lg font-black text-orange-600">${escapeHtml(company.observados || 0)}</p>
+          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Obs.</p>
+        </div>
+
+        <div>
+          <p class="text-lg font-black text-red-600">${escapeHtml(company.rechazados || 0)}</p>
+          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Rech.</p>
+        </div>
+
+        <div>
+          <p class="text-lg font-black text-slate-900">${escapeHtml(company.riskScore || 0)}</p>
+          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Riesgo</p>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderMetricCard(label, value, sub, color, mini1, mini1Label, mini2, mini2Label, ringPct, ringLabel, mini1Color) {

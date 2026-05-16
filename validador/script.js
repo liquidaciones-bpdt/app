@@ -581,17 +581,9 @@ function renderDashboard() {
       <div class="flex justify-between items-center mb-10">
         <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Progreso de Validación</h3>
 
-        <div class="flex gap-6 items-center">
-          <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-[#3B82F6]"></div>
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progreso real</span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-[#FFB300]"></div>
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meta 90%</span>
-          </div>
-        </div>
+        <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-[#3B82F6]"></div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Documentos por estado</span>
       </div>
 
       <div class="h-[400px] w-full relative">
@@ -856,36 +848,20 @@ function initDashboardChart(stats) {
   if (dashboardChart) dashboardChart.destroy();
 
   dashboardChart = new Chart(ctx, {
-    type: 'line',
+    type: 'bar',
     data: {
-      labels: ['Base', 'Pendiente', 'Auditado', 'Actual'],
+      labels: ['Pendientes', 'Observados', 'Rechazados', 'Aprobados'],
       datasets: [
         {
-          label: 'Progreso real',
+          label: 'Documentos',
           data: [
-            0,
-            stats.pendingPct,
-            stats.validationProgress,
-            stats.avgCompanyCompliance
+            stats.pendientes || 0,
+            stats.observados || 0,
+            stats.rechazados || 0,
+            stats.aprobados || 0
           ],
-          borderColor: '#3B82F6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 4,
-          pointRadius: 6,
-          pointBackgroundColor: '#3B82F6',
-          pointBorderWidth: 4,
-          pointBorderColor: '#fff'
-        },
-        {
-          label: 'Meta de cumplimiento',
-          data: [90, 90, 90, 90],
-          borderColor: '#FFB300',
-          borderDash: [5, 5],
           borderWidth: 2,
-          fill: false,
-          pointRadius: 0
+          borderRadius: 14
         }
       ]
     },
@@ -897,10 +873,12 @@ function initDashboardChart(stats) {
       },
       scales: {
         y: {
-          min: 0,
-          max: 100,
+          beginAtZero: true,
           grid: { color: '#f1f5f9' },
-          ticks: { color: '#64748b' }
+          ticks: {
+            color: '#64748b',
+            precision: 0
+          }
         },
         x: {
           grid: { display: false },

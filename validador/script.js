@@ -5,7 +5,7 @@ const REQUEST_TIMEOUT_MS = 25000;
 
 const ESTADOS = {
   PENDIENTE: 'PENDIENTE_VALIDACION',
-  VALIDADO: 'VALIDADO',
+  APROBADO: 'APROBADO',
   OBSERVADO: 'OBSERVADO',
   RECHAZADO: 'RECHAZADO'
 };
@@ -165,11 +165,11 @@ function getStatusStyle(status) {
     };
   }
 
-  if (estado === ESTADOS.VALIDADO) {
+  if (estado === ESTADOS.APROBADO) {
     return {
       badge: 'bg-emerald-50 text-emerald-600 border-emerald-100',
       icon: 'bg-emerald-50 text-emerald-500',
-      label: 'Validado'
+      label: 'Aprobado'
     };
   }
 
@@ -464,7 +464,7 @@ function buildCompanies(docs = []) {
         pendientes: 0,
         observados: 0,
         rechazados: 0,
-        validados: 0
+        aprobados: 0
       };
     }
 
@@ -473,7 +473,7 @@ function buildCompanies(docs = []) {
     if (doc.estado_validacion === ESTADOS.PENDIENTE) map[key].pendientes += 1;
     if (doc.estado_validacion === ESTADOS.OBSERVADO) map[key].observados += 1;
     if (doc.estado_validacion === ESTADOS.RECHAZADO) map[key].rechazados += 1;
-    if (doc.estado_validacion === ESTADOS.VALIDADO) map[key].validados += 1;
+    if (doc.estado_validacion === ESTADOS.APROBADO) map[key].aprobados += 1;
   });
 
   return Object.values(map);
@@ -570,9 +570,9 @@ function buildDashboardStats() {
   const pendientes = docs.filter(d => d.estado_validacion === ESTADOS.PENDIENTE).length;
   const observados = docs.filter(d => d.estado_validacion === ESTADOS.OBSERVADO).length;
   const rechazados = docs.filter(d => d.estado_validacion === ESTADOS.RECHAZADO).length;
-  const validados = docs.filter(d => d.estado_validacion === ESTADOS.VALIDADO).length;
+  const aprobados = docs.filter(d => d.estado_validacion === ESTADOS.APROBADO).length;
 
-  const completedDocs = validados + rechazados + observados;
+  const completedDocs = aprobados + rechazados + observados;
   const validationProgress = totalDocs ? Math.round((completedDocs / totalDocs) * 100) : 0;
   const pendingPct = totalDocs ? Math.round((pendientes / totalDocs) * 100) : 0;
 
@@ -581,7 +581,7 @@ function buildDashboardStats() {
   const avgCompanyCompliance = companies.length
     ? Math.round(
         companies.reduce((sum, c) => {
-          const approved = Number(c.validados || 0);
+          const approved = Number(c.aprobados || 0);
           const total = Number(c.total || 0);
           const pct = total ? (approved / total) * 100 : 0;
           return sum + pct;
@@ -594,7 +594,7 @@ function buildDashboardStats() {
     pendientes,
     observados,
     rechazados,
-    validados,
+    aprobados,
     completedDocs,
     validationProgress,
     pendingPct,
@@ -736,7 +736,7 @@ function renderValidation() {
       ${renderFilterButton('PENDIENTE_VALIDACION', 'Pendientes')}
       ${renderFilterButton('OBSERVADO', 'Observados')}
       ${renderFilterButton('RECHAZADO', 'Rechazados')}
-      ${renderFilterButton('VALIDADO', 'Validados')}
+      ${renderFilterButton('APROBADO', 'Aprobados')}
       ${renderFilterButton('TODOS', 'Todos')}
     </div>
 
@@ -864,7 +864,7 @@ function renderRequirements() {
     <div class="flex items-center justify-between">
       <div>
         <h3 class="text-2xl font-black text-slate-900 uppercase tracking-tight">Matriz de requisitos</h3>
-        <p class="text-sm text-slate-400 font-medium">Administra los requisitos visibles para el Portal Asistente.</p>
+        <p class="text-sm text-slate-400 font-medium">Administra los requisitos visibles para el Portal Proveedor.</p>
       </div>
 
       <button type="button" onclick="openRequirementModal()" class="px-6 py-4 btn-primary text-[10px]">
@@ -957,7 +957,7 @@ function openRequirementModal(requisitoId = null) {
         <h3 class="text-2xl font-black text-slate-900 tracking-tight uppercase">
           ${req ? 'Editar Requisito' : 'Nuevo Requisito'}
         </h3>
-        <p class="text-slate-500 font-medium mt-1">Define la regla documental que verá el Portal Asistente.</p>
+        <p class="text-slate-500 font-medium mt-1">Define la regla documental que verá el Portal Proveedor.</p>
       </div>
 
       <form id="requirement-form" onsubmit="handleRequirementSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1239,7 +1239,7 @@ function renderReports() {
         ${renderStatCard('Pendientes', stats.pendientes || 0, 'clock', 'text-amber-500')}
         ${renderStatCard('Observados', stats.observados || 0, 'eye', 'text-orange-500')}
         ${renderStatCard('Rechazados', stats.rechazados || 0, 'x-circle', 'text-red-500')}
-        ${renderStatCard('Validados', stats.validados || 0, 'check-circle-2', 'text-emerald-500')}
+        ${renderStatCard('Aprobados', stats.aprobados || 0, 'check-circle-2', 'text-emerald-500')}
       </div>
     </div>
   `;
@@ -1267,7 +1267,7 @@ function buildStatsFromDocs(docs = []) {
     pendientes: docs.filter(d => d.estado_validacion === ESTADOS.PENDIENTE).length,
     observados: docs.filter(d => d.estado_validacion === ESTADOS.OBSERVADO).length,
     rechazados: docs.filter(d => d.estado_validacion === ESTADOS.RECHAZADO).length,
-    validados: docs.filter(d => d.estado_validacion === ESTADOS.VALIDADO).length
+    aprobados: docs.filter(d => d.estado_validacion === ESTADOS.APROBADO).length
   };
 }
 

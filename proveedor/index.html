@@ -476,9 +476,30 @@
 
         <form id="crew-form" onsubmit="handleCrewSubmit(event)" class="grid grid-cols-2 gap-6">
           <input type="hidden" id="crew-form-mode" value="create">
+
           <div class="space-y-2">
-            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">DNI</label>
-            <input type="text" id="form-crew-dni" placeholder="12345678" class="input-brand" required>
+            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">
+              Tipo de documento
+            </label>
+          
+            <select id="form-crew-tipo-documento" class="input-brand" required>
+              <option value="DNI">DNI</option>
+              <option value="CE">CE</option>
+            </select>
+          </div>
+          
+          <div class="space-y-2">
+            <label id="form-crew-document-label" class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">
+              N° Documento
+            </label>
+          
+            <input
+              type="text"
+              id="form-crew-dni"
+              placeholder="Ej: 12345678"
+              class="input-brand"
+              required
+            >
           </div>
 
           <div class="space-y-2">

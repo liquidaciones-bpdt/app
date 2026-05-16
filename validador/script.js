@@ -490,7 +490,7 @@ function renderDashboard() {
   const stats = buildDashboardStats();
 
   view.innerHTML = `
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
       ${renderMetricCard(
         'CUMPLIMIENTO DOCUMENTAL CARGADO',
         stats.avgCompanyCompliance,
@@ -550,40 +550,6 @@ function renderDashboard() {
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-  ${renderOperationalKpi(
-    'Empresas aptas',
-    stats.empresasAptas || 0,
-    'check-circle-2',
-    'text-emerald-500',
-    'bg-emerald-50'
-  )}
-
-  ${renderOperationalKpi(
-    'Empresas en riesgo',
-    stats.empresasEnRiesgo || 0,
-    'alert-triangle',
-    'text-amber-500',
-    'bg-amber-50'
-  )}
-
-  ${renderOperationalKpi(
-    'Empresas no aptas',
-    stats.empresasNoAptas || 0,
-    'x-circle',
-    'text-red-500',
-    'bg-red-50'
-  )}
-
-  ${renderOperationalKpi(
-    'Docs. críticos',
-    stats.documentosCriticos || 0,
-    'file-warning',
-    'text-orange-500',
-    'bg-orange-50'
-  )}
-</div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
       ${renderOperationalKpi('Empresas aptas', stats.empresasAptas || 0, 'check-circle-2', 'text-emerald-500', 'bg-emerald-50')}
       ${renderOperationalKpi('Empresas en riesgo', stats.empresasEnRiesgo || 0, 'alert-triangle', 'text-amber-500', 'bg-amber-50')}
       ${renderOperationalKpi('Empresas no aptas', stats.empresasNoAptas || 0, 'x-circle', 'text-red-500', 'bg-red-50')}
@@ -610,27 +576,6 @@ function renderDashboard() {
         }
       </div>
     </div>
-
-      <div class="card-brand p-8">
-  <div class="flex items-center justify-between mb-8">
-    <div>
-      <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight">
-        Ranking de proveedores por riesgo
-      </h3>
-      <p class="text-sm text-slate-400 font-medium">
-        Empresas con mayor acumulación de documentos pendientes, observados o rechazados.
-      </p>
-    </div>
-  </div>
-
-  <div class="space-y-4">
-    ${
-      stats.riskRanking && stats.riskRanking.length
-        ? stats.riskRanking.map(renderRiskCompanyRow).join('')
-        : `<div class="p-8 text-center text-slate-400 font-bold">No hay proveedores con riesgo documental.</div>`
-    }
-  </div>
-</div>
 
     <div class="card-brand p-12">
       <div class="flex justify-between items-center mb-10">
@@ -670,7 +615,7 @@ function renderDashboard() {
         ${
           stats.recentDocs.length
             ? stats.recentDocs.map(renderDocRow).join('')
-            : `<div class="p-8 text-center text-slate-400 font-bold">No hay documentos pendientes.</div>`
+            : `<div class="p-8 text-center text-slate-400 font-bold">No hay documentos recientes.</div>`
         }
       </div>
     </div>
@@ -764,94 +709,6 @@ function buildDashboardStats() {
     riskRanking,
     recentDocs: docs.slice(0, 5)
   };
-}
-
-function renderOperationalKpi(label, value, icon, colorClass, bgClass) {
-  return `
-    <div class="card-brand p-6 flex items-center gap-5">
-      <div class="w-14 h-14 rounded-2xl ${bgClass} ${colorClass} flex items-center justify-center">
-        <i data-lucide="${icon}" style="width: 24px; height: 24px;"></i>
-      </div>
-
-      <div>
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          ${escapeHtml(label)}
-        </p>
-        <h3 class="text-3xl font-black text-slate-900 tracking-tight mt-1">
-          ${escapeHtml(value)}
-        </h3>
-      </div>
-    </div>
-  `;
-}
-
-function renderRiskCompanyRow(company) {
-  const status = company.operationalStatus || 'OBSERVADO';
-
-  const meta = {
-    APTO: {
-      label: 'Apto',
-      badge: 'bg-emerald-50 text-emerald-600 border-emerald-100'
-    },
-    OBSERVADO: {
-      label: 'En riesgo',
-      badge: 'bg-amber-50 text-amber-600 border-amber-100'
-    },
-    NO_APTO: {
-      label: 'No apto',
-      badge: 'bg-red-50 text-red-600 border-red-100'
-    }
-  }[status] || {
-    label: status,
-    badge: 'bg-slate-50 text-slate-500 border-slate-100'
-  };
-
-  return `
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-5 p-5 bg-slate-50 rounded-[28px] border border-slate-100">
-      <div>
-        <div class="flex flex-wrap items-center gap-3 mb-2">
-          <h4 class="font-black text-slate-900 uppercase">
-            ${escapeHtml(company.razon_social || company.empresa_ruc)}
-          </h4>
-
-          <span class="${meta.badge} px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest">
-            ${escapeHtml(meta.label)}
-          </span>
-        </div>
-
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          RUC: ${escapeHtml(company.empresa_ruc || '-')}
-        </p>
-      </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center min-w-[420px]">
-        <div>
-          <p class="text-lg font-black text-slate-900">${escapeHtml(company.compliance || 0)}%</p>
-          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Cumpl.</p>
-        </div>
-
-        <div>
-          <p class="text-lg font-black text-amber-600">${escapeHtml(company.pendientes || 0)}</p>
-          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pend.</p>
-        </div>
-
-        <div>
-          <p class="text-lg font-black text-orange-600">${escapeHtml(company.observados || 0)}</p>
-          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Obs.</p>
-        </div>
-
-        <div>
-          <p class="text-lg font-black text-red-600">${escapeHtml(company.rechazados || 0)}</p>
-          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Rech.</p>
-        </div>
-
-        <div>
-          <p class="text-lg font-black text-slate-900">${escapeHtml(company.riskScore || 0)}</p>
-          <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Riesgo</p>
-        </div>
-      </div>
-    </div>
-  `;
 }
 
 function renderOperationalKpi(label, value, icon, colorClass, bgClass) {

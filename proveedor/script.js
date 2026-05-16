@@ -870,7 +870,7 @@ const crew = (state.data.crew || []).filter(c => {
                   </h4>
 
                   <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                    DNI: ${escapeHtml(c.dni || c.id || '-')}
+                    ${escapeHtml(c.tipo_documento || 'DNI')}: ${escapeHtml(c.dni || c.id || '-')}
                   </p>
 
                   <p class="text-[12px] font-black text-[#E20613] uppercase tracking-widest mt-2">

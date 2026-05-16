@@ -490,6 +490,31 @@ function renderDashboard() {
   const stats = buildDashboardStats();
 
   view.innerHTML = `
+      <div class="card-brand p-10 bg-slate-900 text-white">
+      <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-8">
+        <div>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-3">
+            Decisión operativa
+          </p>
+
+          <h3 class="text-3xl font-black uppercase tracking-tight leading-tight">
+            ¿La red de proveedores está apta para operar?
+          </h3>
+
+          <p class="text-sm text-slate-300 font-medium mt-3 max-w-2xl">
+            Resumen ejecutivo para identificar proveedores aptos, en riesgo o no aptos según su situación documental cargada y evaluada.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 min-w-full xl:min-w-[720px]">
+          ${renderDecisionKpi('Total proveedores', stats.totalCompanies || 0, 'building-2', 'text-blue-300')}
+          ${renderDecisionKpi('Aptos', stats.empresasAptas || 0, 'check-circle-2', 'text-emerald-300')}
+          ${renderDecisionKpi('En riesgo', stats.empresasEnRiesgo || 0, 'alert-triangle', 'text-amber-300')}
+          ${renderDecisionKpi('No aptos', stats.empresasNoAptas || 0, 'x-circle', 'text-red-300')}
+          ${renderDecisionKpi('Cumplimiento', `${stats.avgCompanyCompliance || 0}%`, 'gauge', 'text-sky-300')}
+        </div>
+      </div>
+    </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
       ${renderMetricCard(
         'CUMPLIMIENTO DOCUMENTAL CARGADO',
@@ -578,18 +603,23 @@ function renderDashboard() {
     </div>
 
     <div class="card-brand p-12">
-      <div class="flex justify-between items-center mb-10">
-        <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Progreso de Validación</h3>
+  <div class="flex justify-between items-center mb-10">
+    <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
+      Distribución de documentos por estado
+    </h3>
 
-        <div class="flex items-center gap-2">
-        <div class="w-3 h-3 rounded-full bg-[#3B82F6]"></div>
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Documentos por estado</span>
-      </div>
-
-      <div class="h-[400px] w-full relative">
-        <canvas id="dashboard-chart"></canvas>
-      </div>
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 rounded-full bg-[#3B82F6]"></div>
+      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        Documentos por estado
+      </span>
     </div>
+  </div>
+
+  <div class="h-[400px] w-full relative">
+    <canvas id="dashboard-chart"></canvas>
+  </div>
+</div>
 
     <div class="card-brand p-8">
       <div class="flex items-center justify-between mb-8">
@@ -701,6 +731,24 @@ function buildDashboardStats() {
     riskRanking,
     recentDocs: docs.slice(0, 5)
   };
+}
+
+function renderDecisionKpi(label, value, icon, colorClass) {
+  return `
+    <div class="bg-white/10 border border-white/10 rounded-[28px] p-5">
+      <div class="w-11 h-11 rounded-2xl bg-white/10 ${colorClass} flex items-center justify-center mb-4">
+        <i data-lucide="${icon}" style="width: 22px; height: 22px;"></i>
+      </div>
+
+      <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
+        ${escapeHtml(label)}
+      </p>
+
+      <h4 class="text-3xl font-black tracking-tight text-white">
+        ${escapeHtml(value)}
+      </h4>
+    </div>
+  `;
 }
 
 function renderOperationalKpi(label, value, icon, colorClass, bgClass) {

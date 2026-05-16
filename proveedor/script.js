@@ -382,6 +382,7 @@ function normalizeCrew(crew = []) {
   return crew.map(c => ({
     ...c,
     id: c.id || c.dni,
+    tipo_documento: c.tipo_documento || 'DNI',
     nombre: getCrewName(c),
     rol: c.rol || c.cargo || '',
     compliance: clampPercent(c.compliance || c.cumplimiento || 0),
@@ -1471,6 +1472,7 @@ function openCrewModal(id = null) {
   const modeInput = document.getElementById('crew-form-mode');
   const title = document.getElementById('crew-modal-title');
   const dniInput = document.getElementById('form-crew-dni');
+  const tipoDocumentoInput = document.getElementById('form-crew-tipo-documento');
 
   if (!modal || !form) {
     console.error('Falta #crew-modal o #crew-form en index.html.');
@@ -1512,6 +1514,10 @@ function openCrewModal(id = null) {
       dniInput.classList.add('bg-slate-50', 'text-slate-400');
     }
 
+    if (tipoDocumentoInput) {
+      tipoDocumentoInput.value = person.tipo_documento || 'DNI';
+    }
+
     const nombresInput = document.getElementById('form-crew-nombres');
     const apellidosInput = document.getElementById('form-crew-apellidos');
     const cargoInput = document.getElementById('form-crew-cargo');
@@ -1533,6 +1539,11 @@ function openCrewModal(id = null) {
       dniInput.readOnly = false;
       dniInput.classList.remove('bg-slate-50', 'text-slate-400');
     }
+
+    if (tipoDocumentoInput) {
+      tipoDocumentoInput.value = 'DNI';
+    }
+    
     const estadoInput = document.getElementById('form-crew-estado');
     if (estadoInput) estadoInput.value = 'ACTIVO';
   }
@@ -1575,6 +1586,7 @@ async function handleCrewSubmit(event) {
 
   const payload = {
     user: state.user,
+    tipo_documento: document.getElementById('form-crew-tipo-documento')?.value || 'DNI',
     dni: document.getElementById('form-crew-dni')?.value.trim(),
     nombres: document.getElementById('form-crew-nombres')?.value.trim(),
     apellidos: document.getElementById('form-crew-apellidos')?.value.trim(),
@@ -1585,8 +1597,8 @@ async function handleCrewSubmit(event) {
       : 'ACTIVO'
   };
 
-  if (!payload.dni || !payload.nombres || !payload.apellidos || !payload.cargo) {
-    alert('Complete DNI, nombres, apellidos y cargo.');
+  if (!payload.tipo_documento || !payload.dni || !payload.nombres || !payload.apellidos || !payload.cargo) {
+    alert('Complete tipo de documento, número de documento, nombres, apellidos y cargo.');
     return;
   }
 

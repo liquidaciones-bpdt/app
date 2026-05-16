@@ -368,13 +368,15 @@ async function refreshData(silent = false) {
       companies: [],
       requirements: normalizeRequirements(res.requirements || [])
     };
-
+    
     if (res.user) {
       saveSession(res.user);
       setUserHeader(res.user);
     }
-
-    state.data.companies = normalizeCompanies(res.companies || buildCompanies(state.data.docs));
+    
+    state.data.companies = res.companies
+      ? normalizeCompanies(res.companies)
+      : buildCompanies(state.data.docs);
 
     renderTab();
   } catch (error) {
@@ -477,6 +479,38 @@ function buildCompanies(docs = []) {
   });
 
   return Object.values(map);
+}
+
+function normalizeCompanies(companies = []) {
+  return companies.map(company => ({
+    empresa_ruc: company.empresa_ruc || '',
+    razon_social: company.razon_social || company.empresa_ruc || 'SIN RAZÓN SOCIAL',
+
+    total: Number(company.total || company.total_requisitos || 0),
+    pendientes: Number(company.pendientes || 0),
+    observados: Number(company.observados || 0),
+    rechazados: Number(company.rechazados || 0),
+    aprobados: Number(company.aprobados || company.cumplidos || 0),
+
+    cumplimiento: Number(company.cumplimiento || company.cumplimiento_global || 0),
+    cumplimiento_global: Number(company.cumplimiento_global || company.cumplimiento || 0),
+
+    faltantes: Number(company.faltantes || 0),
+    vencidos: Number(company.vencidos || 0),
+    por_vencer: Number(company.por_vencer || 0),
+    vigentes: Number(company.vigentes || 0),
+
+    pendientes_validacion: Number(company.pendientes_validacion || 0),
+
+    estado_operativo: company.estado_operativo || company.operationalStatus || 'OBSERVADO',
+    operationalStatus: company.operationalStatus || company.estado_operativo || 'OBSERVADO',
+
+    riskScore: Number(company.riskScore || company.riesgo || 0),
+
+    unidades: company.unidades || [],
+    tripulacion: company.tripulacion || [],
+    matrix: company.matrix || []
+  }));
 }
 
 /* =========================

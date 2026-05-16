@@ -374,7 +374,7 @@ async function refreshData(silent = false) {
       setUserHeader(res.user);
     }
 
-    state.data.companies = buildCompanies(state.data.docs);
+    state.data.companies = normalizeCompanies(res.companies || buildCompanies(state.data.docs));
 
     renderTab();
   } catch (error) {

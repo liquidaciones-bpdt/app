@@ -1,5 +1,5 @@
 const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycby3HUXGj8Xl_xtfqY_Ajc__o83Zs-JDm3_UYyZT7HK_YBYw7aDCqCivg0Iltv5ka2pN/exec",
+  API_URL: "https://script.google.com/macros/s/AKfycbwMxmHSvJDAYee5Ug_DEjp6lJ5Z7RryL4Cq5-bc_GzPVn9gKz5RJBTg3vd9lmuHYoHJ/exec",
 
   PORTAL: "VALIDADOR",
 

@@ -549,49 +549,7 @@ function renderDashboard() {
         </div>
       </div>
     </div>
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-      ${renderMetricCard(
-        'CUMPLIMIENTO DOCUMENTAL CARGADO',
-        stats.avgCompanyCompliance,
-        'Promedio basado en documentos cargados y evaluados',
-        '#3B82F6',
-        stats.totalCompanies,
-        'Empresas',
-        stats.companiesWithDocs,
-        'Con docs',
-        stats.avgCompanyCompliance,
-        'Global'
-      )}
     
-      ${renderMetricCard(
-        'AVANCE DE REVISIÓN',
-        stats.validationProgress,
-        'Documentos ya revisados por el validador',
-        '#E30613',
-        stats.completedDocs,
-        'Revisados',
-        stats.totalDocs,
-        'Total docs',
-        stats.validationProgress,
-        'Procesado',
-        '#00B074'
-      )}
-    
-      ${renderMetricCard(
-        'COLA PENDIENTE',
-        stats.pendingPct,
-        'Documentos pendientes por revisar',
-        '#FFB300',
-        stats.pendientes,
-        'Pendientes',
-        stats.totalDocs,
-        'Total docs',
-        stats.pendingPct,
-        'Pendiente',
-        '#FFB300'
-      )}
-    </div>
-
     <div class="card-brand p-8 bg-white border border-slate-50 flex items-center gap-10">
       <div class="min-w-[220px]">
         <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Avance de revisión documental</p>
@@ -637,10 +595,10 @@ function renderDashboard() {
     </div>
 
     <div class="card-brand p-12">
-  <div class="flex justify-between items-center mb-10">
-    <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
-      Distribución de documentos por estado
-    </h3>
+      <div class="flex justify-between items-center mb-10">
+        <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
+          Distribución de documentos por estado
+        </h3>
 
     <div class="flex items-center gap-2">
       <div class="w-3 h-3 rounded-full bg-[#3B82F6]"></div>
